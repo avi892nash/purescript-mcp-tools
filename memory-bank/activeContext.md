@@ -1,16 +1,30 @@
 # Active Context: PureScript MCP Server - Automated Test Script Added
 
 ## 1. Current Work Focus
-All recent changes, including `INSTALL.md` and `CLINE_MCP_INSTALL.md`, have been committed and pushed to the remote Git repository. A specific installation guide for Cline (`CLINE_MCP_INSTALL.md`) has been created.
+Installation documentation has been consolidated into a single `INSTALL.md` file. `CLINE_MCP_INSTALL.md` has been deleted. The `.clinerules` file and Memory Bank have been updated to reflect this. All changes are pushed to `origin/main`.
 
 ## 2. Recent Changes
+- **Deleted `CLINE_MCP_INSTALL.md`**.
+- **Updated `.clinerules`:**
+    - Removed references to `CLINE_MCP_INSTALL.md`.
+    - Confirmed `INSTALL.md` as the sole installation guide for all users (including Cline if setting up from scratch).
+    - Updated installation prompt guidelines accordingly.
+- **Git Operations:**
+    - Committed the deletion of `CLINE_MCP_INSTALL.md` and updates to `.clinerules`.
+    - Pushed changes to `origin/main`.
+
+Previously:
+- **Updated `.clinerules`:**
+    - Reflected the (now previous) strategy of having two installation files.
+- **Finalized General Installation Prompt:**
+    - Confirmed a single prompt that directs users to clone the repository and use `INSTALL.md`.
 - **Created `CLINE_MCP_INSTALL.md`:**
-    - Added a guide specifically for Cline on how to ensure the MCP server is running and how to use its tools.
+    - (This file is now deleted).
 - **Git Operations:**
     - Set remote URL to `ssh://git@ssh.bitbucket.juspay.net/~avinash.verma_juspay.in/purescript-tools-mcp.git`.
     - All changes committed to the local `main` branch.
     - Pushed local `main` branch to `origin/main` and set as upstream.
-    - Previous commits included adding `INSTALL.md`, `CLINE_MCP_INSTALL.md`, updating `mcp-config.json`, and Memory Bank.
+    - Previous commits included adding `INSTALL.md`, updating `mcp-config.json`, and Memory Bank.
 
 Previously:
 - **Created `INSTALL.md`:**
