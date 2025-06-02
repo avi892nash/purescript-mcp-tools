@@ -32,8 +32,8 @@ graph LR
 
 ## 2. Key Technical Decisions
 - **Language:** Node.js for the MCP server (JavaScript).
-- **MCP Communication:** HTTP-based, using Express.js.
-- **AST Querying:** `web-tree-sitter` with `tree-sitter-purescript.wasm` for direct AST manipulation.
+- **MCP Communication:** Utilizes HTTP for tool invocation, implemented with a standard Node.js web framework (details in Tech Context).
+- **AST Querying:** Employs direct AST parsing for PureScript code analysis (specific library detailed in Tech Context).
 - **PureScript IDE Interaction:**
     - The MCP server manages a `purs ide server` as a child process.
     - Communication with `purs ide server` is via TCP sockets, sending/receiving JSON.

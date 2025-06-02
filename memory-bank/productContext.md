@@ -24,6 +24,6 @@ Cline will communicate with this server using the Model Context Protocol. The se
 
 ## 4. Key Features
 - **Extensibility:** Designed to easily add new tools for different PureScript-related tasks.
-- **Testability:** Includes a mechanism or sample setup to test the server and its tools, potentially using a `purescript-test-examples` directory.
+- **Testability:** Facilitates testing of server tools, primarily via the `purescript-test-examples` project (detailed in the Project Brief).
 - **Standard Compliance:** Adheres to the Model Context Protocol for communication.
 - **Node.js Based:** Leverages the Node.js ecosystem for development and potential integrations.

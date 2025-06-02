@@ -50,7 +50,6 @@ Previously:
 - `purescript-test-examples` was set up.
 
 ## 3. Next Steps
-- Await user feedback/approval on the creation of `CLINE_MCP_INSTALL.md` and the successful Git push.
 - Consider if the `generate_dependency_graph` tool itself should be enhanced to automatically discover all project-internal modules or transitive dependencies. (Potential future improvement).
 
 ## 4. Active Decisions and Considerations

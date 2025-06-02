@@ -31,7 +31,6 @@
 
 ## 2. What's Left to Build (Immediate Tasks)
 - **User-Defined Integrations:** Await specific API integration details or further PureScript tool requirements from the user.
-- **Potential `generate_dependency_graph` Enhancement:** Consider improving the tool to automatically discover all project-internal modules or transitive dependencies for a more comprehensive graph without requiring explicit listing in `target_modules` during invocation.
 
 ## 3. Current Status
 - The `purescript-test-examples` Spago project is updated and compiled.
