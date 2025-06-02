@@ -20,8 +20,7 @@
     - The remote repository is `ssh://git@ssh.bitbucket.juspay.net/~avinash.verma_juspay.in/purescript-tools-mcp.git`.
 
 ## Documentation Strategy
-- **`INSTALL.md`:** Provides general installation instructions for any user/developer wanting to set up the server from scratch (includes cloning).
-- **`CLINE_MCP_INSTALL.md`:** A specialized guide for me (Cline) to set up the server if the project files are already present locally (e.g., in `/Users/avinash.verma/Juspay/what-is-purs`). This file focuses on starting the server and understanding its tools from an existing checkout.
+- **`INSTALL.md`:** Provides general installation instructions for any user/developer wanting to set up the server from scratch (includes cloning). This is the single source of truth for installation.
 - **Memory Bank:** Core project context, decisions, and progress are tracked in the `memory-bank/` directory.
 
 ## Tool Usage Patterns
@@ -30,16 +29,15 @@
 - `replace_in_file`: Preferred for modifying existing files once they are created.
 
 ## Important Reminders for Cline
-- **Memory Reset:** My memory is reset between sessions. The Memory Bank and `CLINE_MCP_INSTALL.md` are CRUCIAL for re-orienting myself to this project.
+- **Memory Reset:** My memory is reset between sessions. The Memory Bank and `INSTALL.md` (for understanding setup if needed) are CRUCIAL for re-orienting myself to this project.
 - **File Paths:** All paths are relative to the project root (`/Users/avinash.verma/Juspay/what-is-purs`).
 - **User Confirmation:** Wait for user confirmation after each tool use.
 - **`mcp-config.json` Structure:** This file defines how I discover and use the server's tools.
 - **PureScript Tooling:** `purs ide` interaction is a core feature.
 - **Installation Prompts:**
-    - For a *general user/developer* (or a new AI instance): The prompt must include the `git clone` command and direct them to `INSTALL.md`.
-    - For *myself (Cline)*, if the project is already cloned: The prompt should direct me to `CLINE_MCP_INSTALL.md` and the local project path.
+    - For any user/developer (including a new AI instance or myself if setting up from scratch): The prompt must include the `git clone` command and direct them to `INSTALL.md`.
 
 ## Evolution of Project Decisions
 - Established `main` as the primary Git branch.
-- Created distinct installation guides for general users (`INSTALL.md`) and Cline (`CLINE_MCP_INSTALL.md`).
+- Consolidated installation instructions into a single `INSTALL.md` file.
 - Successfully configured and pushed to the Bitbucket remote.
