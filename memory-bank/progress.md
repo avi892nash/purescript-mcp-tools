@@ -2,7 +2,10 @@
 
 ## 1. What Works
 - **Documentation:**
-    - `INSTALL.md` created with setup and usage instructions.
+    - `INSTALL.md` created with setup and usage instructions for general users.
+    - `CLINE_MCP_INSTALL.md` created with setup and usage instructions specifically for Cline.
+- **Git Repository:**
+    - All project files, including documentation and Memory Bank, committed and pushed to the `main` branch on the remote Bitbucket repository. The `main` branch is set as the upstream.
 - **Memory Bank Core:** All core files created and updated.
 - **Project Intelligence:** `.clinerules` file created.
 - **Node.js Project Setup:**

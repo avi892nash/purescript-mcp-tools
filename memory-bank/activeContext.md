@@ -1,13 +1,20 @@
 # Active Context: PureScript MCP Server - Automated Test Script Added
 
 ## 1. Current Work Focus
-An `INSTALL.md` file has been created to provide setup and usage instructions for the project.
+All recent changes, including `INSTALL.md` and `CLINE_MCP_INSTALL.md`, have been committed and pushed to the remote Git repository. A specific installation guide for Cline (`CLINE_MCP_INSTALL.md`) has been created.
 
 ## 2. Recent Changes
-- **Created `INSTALL.md`:**
-    - Added sections for Prerequisites, Installation Steps, Running the MCP Server, and Running Tests.
+- **Created `CLINE_MCP_INSTALL.md`:**
+    - Added a guide specifically for Cline on how to ensure the MCP server is running and how to use its tools.
+- **Git Operations:**
+    - Set remote URL to `ssh://git@ssh.bitbucket.juspay.net/~avinash.verma_juspay.in/purescript-tools-mcp.git`.
+    - All changes committed to the local `main` branch.
+    - Pushed local `main` branch to `origin/main` and set as upstream.
+    - Previous commits included adding `INSTALL.md`, `CLINE_MCP_INSTALL.md`, updating `mcp-config.json`, and Memory Bank.
 
 Previously:
+- **Created `INSTALL.md`:**
+    - Added sections for Prerequisites, Installation Steps, Running the MCP Server, and Running Tests.
 - **Updated `mcp-config.json`:**
     - Added a performance note to the `generate_dependency_graph` tool's description.
     - Verified no other spelling mistakes were present.
@@ -27,7 +34,7 @@ Previously:
 - `purescript-test-examples` was set up.
 
 ## 3. Next Steps
-- Await user feedback/approval on the `INSTALL.md` creation.
+- Await user feedback/approval on the creation of `CLINE_MCP_INSTALL.md` and the successful Git push.
 - Consider if the `generate_dependency_graph` tool itself should be enhanced to automatically discover all project-internal modules or transitive dependencies. (Potential future improvement).
 
 ## 4. Active Decisions and Considerations
