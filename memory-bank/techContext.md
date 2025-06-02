@@ -3,7 +3,7 @@
 ## 1. Technologies Used
 - **Primary Language:** Node.js (JavaScript).
 - **Package Manager:** npm.
-- **HTTP Server:** Express.js (for MCP server).
+- **Stdio Handling:** Node.js `readline` module for reading line-by-line input from stdin.
 - **AST Parsing:** `web-tree-sitter` with `tree-sitter-purescript.wasm`.
 - **PureScript IDE Interaction:**
     - Node.js `child_process` module (specifically `spawn`) to manage the `purs ide server` process.
@@ -19,7 +19,7 @@
 - **`package.json`:** Will define project dependencies, scripts for running the server, and other metadata.
 
 ## 3. Technical Constraints
-- The MCP server runs as a standalone Node.js process.
+- The MCP server runs as a standalone Node.js script, interacting via stdio.
 - `purs ide server` is managed as a child process.
 - Communication with `purs ide` is over TCP, expecting newline-terminated JSON.
 - `tree-sitter-purescript.wasm` must be present in the project root for AST querying.

@@ -4,13 +4,13 @@
 This project aims to solve the need for extending the capabilities of an AI assistant (Cline) when working with PureScript projects. Currently, Cline might lack direct means to execute PureScript-specific tasks, interact with PureScript development environments, or integrate with PureScript-related APIs. An MCP server will provide a bridge for these functionalities.
 
 ## 2. How it Should Work
-The MCP server will run as a separate Node.js process. It will expose a set of tools that Cline can invoke. These tools will perform actions related to PureScript, such as:
+The MCP server will run as a Node.js script (`node index.js`). It will expose a set of tools that Cline (or another client) can invoke by sending JSON commands to the script's standard input and receiving JSON responses from its standard output. These tools will perform actions related to PureScript, such as:
 - Executing simple PureScript code snippets.
 - (Future) Compiling PureScript projects.
 - (Future) Running PureScript tests.
 - (Future) Interacting with PureScript-specific APIs or services.
 
-Cline will communicate with this server using the Model Context Protocol. The server will listen for tool execution requests, process them, and return results.
+Cline (or the client environment) will communicate with this server using the Model Context Protocol, adapted for an executable/stdio interface. The script will read tool execution requests from stdin, process them, and write results to stdout.
 
 ## 3. User Experience Goals
 - **For Developers:**

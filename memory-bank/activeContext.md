@@ -1,58 +1,57 @@
-# Active Context: PureScript MCP Server - Automated Test Script Added
+# Active Context: PureScript MCP Server - Refactored to Stdio Communication
 
 ## 1. Current Work Focus
-The `INSTALL.md` file has been significantly revised to clearly explain how to install the PureScript MCP Server and, crucially, how to configure an MCP client system to discover this server using its `mcp-config.json`. All changes are pushed to `origin/main`.
+The PureScript MCP Server has been significantly refactored to use stdio (standard input/output) for communication instead of HTTP. This changes its nature from a network server to a command-line tool that processes JSON requests from stdin and returns JSON responses to stdout.
 
 ## 2. Recent Changes
+- **Architectural Refactor to Stdio:**
+    - **`index.js`:**
+        - Removed Express.js HTTP server implementation.
+        - Added `readline` module to process newline-delimited JSON commands from `process.stdin`.
+        - Tool execution results are now written as JSON strings to `process.stdout`.
+        - Logging is directed to `process.stderr` using `chalk`.
+        - Added `get_manifest` and `get_server_status` tools.
+        - All existing tool logic (echo, AST query, purs ide management, dependency graph) adapted to the stdio model.
+    - **`mcp-config.json`:**
+        - Changed server `type` from `"http"` to `"executable"`.
+        - Added `command: "node index.js"` to specify how to run the tool.
+        - Removed `baseUrl` and `manifestPath` (HTTP-specific).
+        - Updated tool list to match the new manifest provided by `get_manifest` tool.
+    - **Memory Bank Update:**
+        - `systemPatterns.md`: Updated architecture diagrams and descriptions for stdio communication.
+        - `techContext.md`: Removed "Express.js", added "readline", updated technical constraints.
+        - `productContext.md`: Updated "How it Should Work" to describe stdio interaction.
+        - `projectbrief.md`: Updated "Project Goal", "Scope", "Key Deliverables", and "Success Criteria" for stdio model.
+
+Previously (before stdio refactor):
 - **Revised `INSTALL.md`:**
     - Focused on cloning, dependency installation, and detailed steps for MCP client configuration (making the client aware of this server's `mcp-config.json`).
-    - Removed operational details like `npm start` and `npm test` from `INSTALL.md`, as per user feedback, to keep it strictly about installation and client discovery.
-    - Used the actual Git repository URL.
+    - Removed operational details like `npm start` and `npm test` from `INSTALL.md`.
 - **Git Operations:**
     - Committed and pushed the refined `INSTALL.md` to `origin/main`.
-
-Previously:
 - **Deleted `CLINE_MCP_INSTALL.md`**.
-- **Updated `.clinerules`:**
-    - Removed references to `CLINE_MCP_INSTALL.md`.
-    - Confirmed `INSTALL.md` as the sole installation guide for all users.
-    - Updated installation prompt guidelines accordingly.
-- **Git Operations:**
-    - Committed the deletion of `CLINE_MCP_INSTALL.md` and updates to `.clinerules`.
-    - Pushed changes to `origin/main`.
-- **Finalized General Installation Prompt:**
-    - Confirmed a single prompt that directs users to clone the repository and use `INSTALL.md`.
-- **Git Operations:**
-    - Set remote URL to `ssh://git@ssh.bitbucket.juspay.net/~avinash.verma_juspay.in/purescript-tools-mcp.git`.
-    - All changes committed to the local `main` branch.
-    - Pushed local `main` branch to `origin/main` and set as upstream.
-    - Previous commits included adding `INSTALL.md`, updating `mcp-config.json`, and Memory Bank.
-
-Previously:
-- **Created `INSTALL.md`:**
-    - Added sections for Prerequisites, Installation Steps, Running the MCP Server, and Running Tests.
-- **Updated `mcp-config.json`:**
-    - Added a performance note to the `generate_dependency_graph` tool's description.
-    - Verified no other spelling mistakes were present.
-- The automated test script (`run_tests.js`) was successfully executed after fixing issues in the `generate_dependency_graph` tool and enhancing the test cases. All tests passed.
-- **Fixed `generate_dependency_graph` tool in `index.js`:**
-    - Improved logic to correctly accumulate multiple `usagesAt` locations for a dependency.
-- **Enhanced `purescript-test-examples`:**
-    - Created `purescript-test-examples/src/Utils.purs`.
-    - Modified `purescript-test-examples/src/Main.purs` to use `Utils.purs`.
-    - Recompiled the project.
-- **Updated `run_tests.js`:**
-    - Added more comprehensive assertions for `generate_dependency_graph`.
-- Executed `npm run test`, and all tests passed.
-- An automated test script (`run_tests.js`) was created.
-- `node-fetch@2` was installed.
-- `TESTING.md` was created.
-- `purescript-test-examples` was set up.
+- **Updated `.clinerules`**.
+- **Finalized General Installation Prompt**.
+- **Git Remote Setup**.
+- **Created `INSTALL.md` (initial version)**.
+- **Updated `mcp-config.json` (HTTP version)**.
+- **Automated test script (`run_tests.js`) for HTTP server executed successfully.**
+- **Fixed `generate_dependency_graph` tool (HTTP version).**
+- **Enhanced `purescript-test-examples`.**
 
 ## 3. Next Steps
-- Consider if the `generate_dependency_graph` tool itself should be enhanced to automatically discover all project-internal modules or transitive dependencies. (Potential future improvement).
+- **Test the Stdio Interface:** Thoroughly test the new stdio communication model by sending JSON commands to `node index.js` via stdin and verifying stdout responses for all tools.
+- **Update `INSTALL.md`:** Revise installation and usage instructions to reflect the stdio-based operation (i.e., running `node index.js` and interacting via stdin/stdout, not `npm start` for an HTTP server).
+- **Update `run_tests.js`:** The existing test script is designed for an HTTP server. It needs to be completely rewritten to:
+    - Spawn `node index.js` as a child process.
+    - Send JSON commands to its stdin.
+    - Read and parse JSON responses from its stdout.
+    - Assert correctness for all tools based on the new stdio interaction.
+- **Update `.clinerules`:** Reflect the change to stdio and the new testing approach.
+- **Commit and Push Changes:** Once testing and documentation are updated, commit all changes related to the stdio refactor.
 
 ## 4. Active Decisions and Considerations
-- **Test Scope for `generate_dependency_graph`:** For now, the test explicitly lists all modules (`Main`, `Utils`, `Effect.Console`) needed to validate the graph. A more robust solution for the tool might involve it discovering all project modules automatically.
-- **Test Coverage:** The dependency graph tests now cover direct and indirect dependencies within the test project.
-- **Server Stability:** The MCP server and `purs ide server` integration appear stable through the test runs.
+- **Client Interaction Model:** The client (e.g., Cline's environment) must now be capable of spawning the `node index.js` process and managing stdio communication with it. This is different from the previous HTTP client model.
+- **Error Handling:** Errors from tool execution are now reported as part of the JSON response on stdout. Script-level errors or internal logs are on stderr.
+- **`purs ide server` Lifecycle:** The `index.js` script still manages the `purs ide server` child process. If `index.js` exits (e.g., stdin closes), it attempts to stop the `purs ide server`.
+- **Manifest Discovery:** The tool manifest is now retrieved by sending a `{"toolName": "get_manifest"}` command to the script's stdin.

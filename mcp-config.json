@@ -1,12 +1,19 @@
 {
   "servers": [
     {
-      "name": "purescript-mcp-server",
-      "description": "A local MCP server for PureScript related tasks.",
-      "type": "http",
-      "baseUrl": "http://localhost:3000",
-      "manifestPath": "/mcp/manifest",
+      "name": "purescript-mcp-stdio-server",
+      "description": "A local MCP server for PureScript related tasks, communicating via stdio.",
+      "type": "executable",
+      "command": "node index.js",
       "tools": [
+        {
+          "name": "get_manifest",
+          "description": "Returns the server's tool manifest."
+        },
+        {
+            "name": "get_server_status",
+            "description": "Returns the current status of the server and its components."
+        },
         {
           "name": "echo",
           "description": "Echoes back the input string."
@@ -17,7 +24,7 @@
         },
         {
           "name": "start_purs_ide_server",
-          "description": "Starts a purs ide server process for a given PureScript project. This server is then used by 'query_purs_ide'. Manages one server instance at a time."
+          "description": "Starts a purs ide server process for a given PureScript project. This server is then used by 'query_purs_ide' and 'generate_dependency_graph'. Manages one server instance at a time."
         },
         {
           "name": "stop_purs_ide_server",
