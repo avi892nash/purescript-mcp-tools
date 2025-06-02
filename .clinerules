@@ -14,18 +14,32 @@
 - **Memory Bank First:** Always ensure Memory Bank files are created/updated before significant code changes or when context shifts.
 - **Iterative Development:** Build components step-by-step, starting with the simplest viable version.
 - **Clear Next Steps:** `activeContext.md` and `progress.md` should clearly outline pending tasks.
+- **Git Workflow:**
+    - The primary branch for this project is `main`.
+    - All new work should be committed to `main` and pushed to `origin/main`.
+    - The remote repository is `ssh://git@ssh.bitbucket.juspay.net/~avinash.verma_juspay.in/purescript-tools-mcp.git`.
+
+## Documentation Strategy
+- **`INSTALL.md`:** Provides general installation instructions for any user/developer wanting to set up the server from scratch (includes cloning).
+- **`CLINE_MCP_INSTALL.md`:** A specialized guide for me (Cline) to set up the server if the project files are already present locally (e.g., in `/Users/avinash.verma/Juspay/what-is-purs`). This file focuses on starting the server and understanding its tools from an existing checkout.
+- **Memory Bank:** Core project context, decisions, and progress are tracked in the `memory-bank/` directory.
 
 ## Tool Usage Patterns
-- `write_to_file`: Used for creating new files (like Memory Bank docs, initial code files).
-- `execute_command`: Will be used for `npm init`, `npm install`, and running the server.
+- `write_to_file`: Used for creating new files (like Memory Bank docs, initial code files, documentation).
+- `execute_command`: Used for `npm init`, `npm install`, running the server, and Git operations.
 - `replace_in_file`: Preferred for modifying existing files once they are created.
 
 ## Important Reminders for Cline
-- **Memory Reset:** My memory is reset between sessions. The Memory Bank is the SOLE source of truth. Read it thoroughly at the start of each session.
+- **Memory Reset:** My memory is reset between sessions. The Memory Bank and `CLINE_MCP_INSTALL.md` are CRUCIAL for re-orienting myself to this project.
 - **File Paths:** All paths are relative to the project root (`/Users/avinash.verma/Juspay/what-is-purs`).
-- **User Confirmation:** Wait for user confirmation after each tool use, especially for file creation/modification and command execution.
-- **`mcp-config.json` Structure:** Pay close attention to the required MCP configuration schema when creating this file. (Details to be added once the MCP server structure is more defined).
-- **PureScript Tooling:** For now, assume `purs` compiler is available in PATH if any tool needs to invoke it. This might become a configurable path later.
+- **User Confirmation:** Wait for user confirmation after each tool use.
+- **`mcp-config.json` Structure:** This file defines how I discover and use the server's tools.
+- **PureScript Tooling:** `purs ide` interaction is a core feature.
+- **Installation Prompts:**
+    - For a *general user/developer* (or a new AI instance): The prompt must include the `git clone` command and direct them to `INSTALL.md`.
+    - For *myself (Cline)*, if the project is already cloned: The prompt should direct me to `CLINE_MCP_INSTALL.md` and the local project path.
 
 ## Evolution of Project Decisions
-- (This section will be updated as the project evolves and decisions change.)
+- Established `main` as the primary Git branch.
+- Created distinct installation guides for general users (`INSTALL.md`) and Cline (`CLINE_MCP_INSTALL.md`).
+- Successfully configured and pushed to the Bitbucket remote.
