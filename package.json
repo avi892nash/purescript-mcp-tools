@@ -1,0 +1,20 @@
+{
+  "name": "what-is-purs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node run_tests.js",
+    "test:original": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "express": "^5.1.0",
+    "node-fetch": "^2.7.0",
+    "web-tree-sitter": "^0.25.5"
+  }
+}

@@ -1,0 +1,31 @@
+# Cline Rules for PureScript MCP Server Project
+
+## Project Overview
+- **Goal:** Develop a Node.js based MCP server to extend Cline's capabilities for PureScript projects.
+- **Initial Focus:** Boilerplate server, basic "echo" tool, Memory Bank setup.
+
+## Key Technical Decisions & Patterns
+- **Server Technology:** Node.js with Express.js for HTTP handling (initial assumption for MCP).
+- **Memory Bank:** Core set of Markdown files (`projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`, `activeContext.md`, `progress.md`) are mandatory and must be kept up-to-date.
+- **MCP Configuration:** `mcp-config.json` will be used for server and tool registration.
+- **PureScript Interaction:** Initially minimal, with a `purescript-test-examples` directory for future use and basic validation.
+
+## Workflow Preferences
+- **Memory Bank First:** Always ensure Memory Bank files are created/updated before significant code changes or when context shifts.
+- **Iterative Development:** Build components step-by-step, starting with the simplest viable version.
+- **Clear Next Steps:** `activeContext.md` and `progress.md` should clearly outline pending tasks.
+
+## Tool Usage Patterns
+- `write_to_file`: Used for creating new files (like Memory Bank docs, initial code files).
+- `execute_command`: Will be used for `npm init`, `npm install`, and running the server.
+- `replace_in_file`: Preferred for modifying existing files once they are created.
+
+## Important Reminders for Cline
+- **Memory Reset:** My memory is reset between sessions. The Memory Bank is the SOLE source of truth. Read it thoroughly at the start of each session.
+- **File Paths:** All paths are relative to the project root (`/Users/avinash.verma/Juspay/what-is-purs`).
+- **User Confirmation:** Wait for user confirmation after each tool use, especially for file creation/modification and command execution.
+- **`mcp-config.json` Structure:** Pay close attention to the required MCP configuration schema when creating this file. (Details to be added once the MCP server structure is more defined).
+- **PureScript Tooling:** For now, assume `purs` compiler is available in PATH if any tool needs to invoke it. This might become a configurable path later.
+
+## Evolution of Project Decisions
+- (This section will be updated as the project evolves and decisions change.)

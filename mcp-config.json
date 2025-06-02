@@ -1,0 +1,37 @@
+{
+  "servers": [
+    {
+      "name": "purescript-mcp-server",
+      "description": "A local MCP server for PureScript related tasks.",
+      "type": "http",
+      "baseUrl": "http://localhost:3000",
+      "manifestPath": "/mcp/manifest",
+      "tools": [
+        {
+          "name": "echo",
+          "description": "Echoes back the input string."
+        },
+        {
+          "name": "query_purescript_ast",
+          "description": "Parses PureScript code and executes a Tree-sitter query against its AST."
+        },
+        {
+          "name": "start_purs_ide_server",
+          "description": "Starts a purs ide server process for a given PureScript project. This server is then used by 'query_purs_ide'. Manages one server instance at a time."
+        },
+        {
+          "name": "stop_purs_ide_server",
+          "description": "Stops the currently managed purs ide server process."
+        },
+        {
+          "name": "query_purs_ide",
+          "description": "Sends a command to the currently running purs ide server (must be started first using 'start_purs_ide_server')."
+        },
+        {
+          "name": "generate_dependency_graph",
+          "description": "Generates a dependency graph for specified PureScript modules using purs ide and Tree-sitter. Graph generation can be slow for a large number of modules (e.g., >100); consider processing in batches if needed."
+        }
+      ]
+    }
+  ]
+}
