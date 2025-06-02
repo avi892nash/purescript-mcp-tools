@@ -1,25 +1,27 @@
 # Active Context: PureScript MCP Server - Automated Test Script Added
 
 ## 1. Current Work Focus
-Installation documentation has been consolidated into a single `INSTALL.md` file. `CLINE_MCP_INSTALL.md` has been deleted. The `.clinerules` file and Memory Bank have been updated to reflect this. All changes are pushed to `origin/main`.
+The `INSTALL.md` file has been significantly revised to clearly explain how to install the PureScript MCP Server and, crucially, how to configure an MCP client system to discover this server using its `mcp-config.json`. All changes are pushed to `origin/main`.
 
 ## 2. Recent Changes
+- **Revised `INSTALL.md`:**
+    - Focused on cloning, dependency installation, and detailed steps for MCP client configuration (making the client aware of this server's `mcp-config.json`).
+    - Removed operational details like `npm start` and `npm test` from `INSTALL.md`, as per user feedback, to keep it strictly about installation and client discovery.
+    - Used the actual Git repository URL.
+- **Git Operations:**
+    - Committed and pushed the refined `INSTALL.md` to `origin/main`.
+
+Previously:
 - **Deleted `CLINE_MCP_INSTALL.md`**.
 - **Updated `.clinerules`:**
     - Removed references to `CLINE_MCP_INSTALL.md`.
-    - Confirmed `INSTALL.md` as the sole installation guide for all users (including Cline if setting up from scratch).
+    - Confirmed `INSTALL.md` as the sole installation guide for all users.
     - Updated installation prompt guidelines accordingly.
 - **Git Operations:**
     - Committed the deletion of `CLINE_MCP_INSTALL.md` and updates to `.clinerules`.
     - Pushed changes to `origin/main`.
-
-Previously:
-- **Updated `.clinerules`:**
-    - Reflected the (now previous) strategy of having two installation files.
 - **Finalized General Installation Prompt:**
     - Confirmed a single prompt that directs users to clone the repository and use `INSTALL.md`.
-- **Created `CLINE_MCP_INSTALL.md`:**
-    - (This file is now deleted).
 - **Git Operations:**
     - Set remote URL to `ssh://git@ssh.bitbucket.juspay.net/~avinash.verma_juspay.in/purescript-tools-mcp.git`.
     - All changes committed to the local `main` branch.

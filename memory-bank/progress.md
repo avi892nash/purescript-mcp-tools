@@ -2,12 +2,12 @@
 
 ## 1. What Works
 - **Documentation:**
-    - `INSTALL.md` serves as the single, consolidated guide for setup and usage instructions for all users (including Cline if setting up from scratch).
+    - `INSTALL.md` significantly revised to focus on installation and MCP client configuration for discovering the server, using the actual Git URL and removing operational details. This is now the definitive installation guide.
     - `CLINE_MCP_INSTALL.md` has been deleted.
 - **Git Repository:**
-    - All project files, including documentation and Memory Bank, committed and pushed to the `main` branch on the remote Bitbucket repository. The `main` branch is set as the upstream.
+    - All project files, including the refined `INSTALL.md` and updated Memory Bank, committed and pushed to the `main` branch on the remote Bitbucket repository.
 - **Memory Bank Core:** All core files created and updated.
-- **Project Intelligence:** `.clinerules` file created and updated to reflect the consolidated documentation strategy and latest project patterns.
+- **Project Intelligence:** `.clinerules` file created and updated to reflect the consolidated and refined documentation strategy.
 - **Node.js Project Setup:**
     - `package.json` initialized with `start` and `test` scripts.
     - `express`, `web-tree-sitter`, `chalk` (v4.1.2), and `node-fetch@2` dependencies installed.
