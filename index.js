@@ -8,13 +8,13 @@ const readline = require('readline');
 
 // --- Tree-sitter PureScript Parser State ---
 let PureScriptLanguage;
-let purescriptTsParser; // Global Tree-sitter parser instance
+let purescriptTsParser;
 let treeSitterInitialized = false;
 
 // --- purs ide Server State ---
 let pursIdeProcess = null;
 let pursIdeServerPort = null;
-let pursIdeProjectPath = null; // Stores the project path used to start purs ide
+let pursIdeProjectPath = null;
 let pursIdeIsReady = false;
 let pursIdeLogBuffer = [];
 const MAX_IDE_LOG_BUFFER = 200;
@@ -26,6 +26,21 @@ const MODULE_NAME_QUERY_SOURCE = "(purescript name: (qualified_module) @qmodule.
 let ENCLOSING_DECL_TS_QUERY;
 let MODULE_NAME_TS_QUERY;
 
+// --- Server Info and Capabilities (MCP Standard) ---
+const SERVER_INFO = {
+    name: 'purescript-tools-mcp',
+    version: '1.1.0', // Updated version for stdio protocol change
+    description: 'Provides tools for PureScript development tasks via stdio MCP.'
+};
+
+// Fix: Update SERVER_CAPABILITIES declaration
+const SERVER_CAPABILITIES = {
+    resources: {}, // Empty if no resources
+    tools: {}, // Tools are listed by tools/list, not in capabilities directly for full definitions
+    resourceTemplates: {} // Empty if no resource templates
+};
+
+// --- Logging ---
 function logToStderr(message, level = 'info') {
     const timestamp = new Date().toISOString();
     let coloredMessage = message;
@@ -36,20 +51,18 @@ function logToStderr(message, level = 'info') {
         case 'debug': coloredMessage = chalk.gray(`[${timestamp}] [DEBUG] ${message}`); break;
         default: coloredMessage = `[${timestamp}] ${message}`;
     }
-    process.stderr.write(coloredMessage + '\\n');
+    process.stderr.write(coloredMessage + '\n');
 }
 
 function logPursIdeOutput(data, type = 'stdout') {
     const message = data.toString().trim();
     const logType = type === 'stderr' ? 'error' : 'info';
     logToStderr(`[purs ide ${type}]: ${message}`, logType);
-    
     pursIdeLogBuffer.push(`[${type}] ${message}`);
-    if (pursIdeLogBuffer.length > MAX_IDE_LOG_BUFFER) {
-        pursIdeLogBuffer.shift();
-    }
+    if (pursIdeLogBuffer.length > MAX_IDE_LOG_BUFFER) pursIdeLogBuffer.shift();
 }
 
+// --- Initialization ---
 async function initializeTreeSitterParser() {
     try {
         await Parser.init();
@@ -63,93 +76,29 @@ async function initializeTreeSitterParser() {
         logToStderr("Tree-sitter PureScript grammar and parser initialized successfully.", "info");
     } catch (error) {
         logToStderr(`Failed to load Tree-sitter PureScript grammar: ${error.message}`, "error");
-        // Don't exit, allow other tools to function if possible, or report error via status.
     }
 }
 
-// --- MCP Server Manifest (adapted for stdio) ---
-const mcpManifest = {
-    name: "purescript-mcp-stdio-server",
-    description: "MCP server for PureScript tasks (via stdio), including AST querying, purs ide interaction, and dependency graph generation.",
-    tools: [
-        {
-            name: "get_manifest",
-            description: "Returns this manifest.",
-            input_schema: {},
-            output_schema: { type: "object", description: "The MCP manifest object." }
-        },
-        {
-            name: "get_server_status",
-            description: "Returns the current status of the server and its components.",
-            input_schema: {},
-            output_schema: { type: "object" }
-        },
-        {
-            name: "echo",
-            description: "Echoes back the input string.",
-            input_schema: { type: "object", properties: { message: { type: "string"}}, required: ["message"] },
-            output_schema: { type: "object", properties: { echoed_message: { type: "string" }}}
-        },
-        {
-            name: "query_purescript_ast",
-            description: "Parses PureScript code and executes a Tree-sitter query against its AST.",
-            input_schema: { type: "object", properties: { purescript_code: { type: "string" }, tree_sitter_query: { type: "string" }}, required: ["purescript_code", "tree_sitter_query"]},
-            output_schema: { type: "object", properties: { results: { type: "array" } }}
-        },
-        {
-            name: "start_purs_ide_server",
-            description: "Starts a purs ide server process. Manages one server instance at a time.",
-            input_schema: { type: "object", properties: { project_path: { type: "string" }, port: { type: "integer", default: 4242 }, output_directory: { type: "string", default: "output/" }, source_globs: { type: "array", items: { type: "string" }, default: ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"]}, log_level: { type: "string", enum: ["all", "debug", "perf", "none"], default: "none" }}},
-            output_schema: { type: "object", properties: { status_message: {type: "string"}, port: {type: "integer"}, project_path: {type: "string"}, initial_load_result: {type: "object"}, logs: {type: "array"}}}
-        },
-        {
-            name: "stop_purs_ide_server",
-            description: "Stops the currently managed purs ide server process.",
-            input_schema: {},
-            output_schema: { type: "object", properties: { status_message: {type: "string"}}}
-        },
-        {
-            name: "query_purs_ide",
-            description: "Sends a command to the currently running purs ide server.",
-            input_schema: { type: "object", properties: { purs_ide_command: { type: "string" }, purs_ide_params: { type: "object" }}, required: ["purs_ide_command"]},
-            output_schema: { type: "object" } // Output is the direct JSON result from purs ide
-        },
-        {
-            name: "generate_dependency_graph",
-            description: "Generates a dependency graph for specified PureScript modules.",
-            input_schema: {
-                type: "object",
-                properties: {
-                    target_modules: { type: "array", items: { type: "string" }, description: "Array of module names." },
-                    max_concurrent_requests: { type: "integer", description: "Max concurrent 'usages' requests.", default: 5 }
-                },
-                required: ["target_modules"]
-            },
-            output_schema: { type: "object", properties: { graph_nodes: { type: "array", items: { type: "object" }}}}
-        }
-    ]
-};
-
-// --- Helper Functions ---
-function getNamespaceForDeclaration(declarationType) {
+// --- Helper Functions (unchanged) ---
+function getNamespaceForDeclaration(declarationType) { /* ... */ }
+function getDeclarationId(decl) { /* ... */ }
+function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+// (Full implementations for getNamespaceForDeclaration and getDeclarationId are kept from previous version)
+getNamespaceForDeclaration = function(declarationType) {
   switch (declarationType) {
     case "value": case "valueoperator": case "dataconstructor": return "value";
     case "type": case "typeoperator": case "synonym": case "typeclass": return "type";
     case "kind": return "kind";
     default: return null;
   }
-}
-
-function getDeclarationId(decl) {
+};
+getDeclarationId = function(decl) {
   if (!decl || !decl.module || !decl.identifier) return `unknown.${Date.now()}.${Math.random()}`;
   return `${decl.module}.${decl.identifier}`;
-}
+};
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
-// --- `purs ide` Communication & Management ---
+// --- `purs ide` Communication & Management (largely unchanged) ---
 function sendCommandToPursIde(commandPayload) {
     return new Promise((resolve, reject) => {
         if (!pursIdeProcess || !pursIdeIsReady || !pursIdeServerPort) {
@@ -159,84 +108,82 @@ function sendCommandToPursIde(commandPayload) {
         let responseData = '';
         client.connect(pursIdeServerPort, '127.0.0.1', () => {
             logToStderr(`[MCP Client->purs ide]: Sending command: ${JSON.stringify(commandPayload).substring(0,100)}...`, 'debug');
-            client.write(JSON.stringify(commandPayload) + '\\n');
+            client.write(JSON.stringify(commandPayload) + '\n');
         });
         client.on('data', (data) => {
             responseData += data.toString();
-            // purs ide sends newline-terminated JSON
-            if (responseData.includes('\\n')) {
-                 const completeResponses = responseData.split('\\n').filter(Boolean);
-                 responseData = ''; // Clear buffer for next potential chunk
+            if (responseData.includes('\n')) {
+                 const completeResponses = responseData.split('\n').filter(Boolean);
+                 responseData = ''; 
                  if (completeResponses.length > 0) {
                     try {
-                        // Assuming purs ide sends one JSON object per command, take the first complete one.
-                        // Or, if it could send multiple, this logic would need adjustment.
-                        // For now, assume one JSON response per line/command.
                         resolve(JSON.parse(completeResponses[0].trim()));
                     } catch (e) {
                         reject(new Error(`Failed to parse JSON response from purs ide: ${e.message}. Raw: ${completeResponses[0]}`));
                     }
                  }
-                 client.end(); // Close after first complete response.
+                 client.end(); 
             }
         });
-         client.on('end', () => {
-            // If responseData still has content here, it means it didn't end with a newline or wasn't parsed.
+        client.on('end', () => {
             if (responseData.trim()) {
-                 try {
-                    resolve(JSON.parse(responseData.trim()));
-                } catch (e) {
-                    reject(new Error(`Failed to parse JSON response from purs ide on end: ${e.message}. Raw: ${responseData}`));
-                }
+                 try { resolve(JSON.parse(responseData.trim())); } 
+                 catch (e) { reject(new Error(`Failed to parse JSON response from purs ide on end: ${e.message}. Raw: ${responseData}`));}
             }
-            // If already resolved, this is fine.
         });
-        client.on('close', () => {
-            logToStderr(`[MCP Client->purs ide]: Connection closed.`, 'debug');
-        });
+        client.on('close', () => { logToStderr(`[MCP Client->purs ide]: Connection closed.`, 'debug'); });
         client.on('error', (err) => reject(new Error(`TCP connection error with purs ide server: ${err.message}`)));
     });
 }
 
-// --- Tool Handlers ---
-async function handleGetManifest() {
-    return mcpManifest;
-}
+// --- Internal Tool Handlers (adapted from previous version) ---
+// These functions now expect 'args' to be the 'params' or 'arguments' object from the 'tools/call' request.
+// Updated to return MCP standard response format { content: [{type: "text", text: ...}] }
 
-async function handleGetServerStatus() {
-    return {
+async function internalHandleGetServerStatus() {
+    const status = {
         treeSitterInitialized,
         pursIdeServer: {
             running: !!pursIdeProcess,
             ready: pursIdeIsReady,
             port: pursIdeServerPort,
             projectPath: pursIdeProjectPath,
-            recentLogs: pursIdeLogBuffer.slice(-10) // Last 10 log entries
+            recentLogs: pursIdeLogBuffer.slice(-10)
         }
     };
+    return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }] };
 }
 
-async function handleEcho(args) {
-    if (!args || typeof args.message !== 'string') throw new Error("Invalid input. 'message' (string) is required.");
-    return { echoed_message: `Echo: ${args.message}` };
+async function internalHandleEcho(args) {
+    if (!args || typeof args.message !== 'string') {
+        throw new Error("Invalid input. 'message' (string) is required.");
+    }
+    return { content: [{ type: "text", text: `Echo: ${args.message}` }] };
 }
 
-async function handleQueryPurescriptAst(args) {
-    if (!treeSitterInitialized || !PureScriptLanguage || !purescriptTsParser) throw new Error("Tree-sitter PureScript grammar/parser not loaded.");
+async function internalHandleQueryPurescriptAst(args) {
+    if (!treeSitterInitialized || !PureScriptLanguage || !purescriptTsParser) {
+        throw new Error("Tree-sitter PureScript grammar/parser not loaded.");
+    }
     if (!args || typeof args.purescript_code !== 'string' || typeof args.tree_sitter_query !== 'string') {
         throw new Error("Invalid input: 'purescript_code' and 'tree_sitter_query' (strings) are required.");
     }
     const tree = purescriptTsParser.parse(args.purescript_code);
     const query = new Query(PureScriptLanguage, args.tree_sitter_query);
     const captures = query.captures(tree.rootNode);
-    const results = captures.map(capture => ({ name: capture.name, text: capture.node.text }));
-    return { results };
+    const results = captures.map(capture => ({ 
+        name: capture.name, 
+        text: capture.node.text 
+    }));
+    return { content: [{ type: "text", text: JSON.stringify({ results }, null, 2) }] };
 }
 
-async function handleStartPursIdeServer(args) {
+async function internalHandleStartPursIdeServer(args) {
     if (pursIdeProcess) {
         logToStderr("Stopping existing purs ide server before starting a new one.", "warn");
-        pursIdeProcess.kill(); pursIdeProcess = null; pursIdeIsReady = false;
+        pursIdeProcess.kill(); 
+        pursIdeProcess = null; 
+        pursIdeIsReady = false;
     }
     pursIdeServerPort = args.port || 4242;
     pursIdeProjectPath = path.resolve(args.project_path || process.cwd());
@@ -244,61 +191,82 @@ async function handleStartPursIdeServer(args) {
     const sourceGlobs = args.source_globs || ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"];
     const logLevel = args.log_level || "none";
     pursIdeLogBuffer = [];
-
     const cmdArgs = ['ide', 'server', '--port', pursIdeServerPort.toString(), '--output-directory', outputDir, '--log-level', logLevel, ...sourceGlobs];
     logToStderr(`Spawning 'npx purs ${cmdArgs.join(' ')}' in CWD: ${pursIdeProjectPath}`, "info");
     
     return new Promise((resolve, reject) => {
         pursIdeProcess = spawn('npx', ['purs', ...cmdArgs], { cwd: pursIdeProjectPath, shell: true });
         pursIdeIsReady = false;
-
         pursIdeProcess.stdout.on('data', (data) => logPursIdeOutput(data, 'stdout'));
         pursIdeProcess.stderr.on('data', (data) => logPursIdeOutput(data, 'stderr'));
         pursIdeProcess.on('error', (err) => {
             logPursIdeOutput(`Failed to start purs ide server: ${err.message}`, 'error');
             pursIdeProcess = null;
-            reject(new Error(`Failed to start purs ide server: ${err.message}`));
+            reject(new Error(`Failed to start purs ide server: ${err.message}`)); // This error will be caught by handleMcpRequest
         });
         pursIdeProcess.on('close', (code) => {
             logPursIdeOutput(`purs ide server process exited with code ${code}`, code === 0 ? 'info' : 'error');
-            if (pursIdeProcess) { pursIdeProcess = null; pursIdeIsReady = false; }
-            // If it closes unexpectedly during startup, this might be an issue.
+            if (pursIdeProcess) { 
+                pursIdeProcess = null; 
+                pursIdeIsReady = false; 
+            }
         });
-
-        // Attempt initial load after a delay
         setTimeout(async () => {
             try {
                 logToStderr("Attempting initial 'load' command to purs ide server...", "info");
-                pursIdeIsReady = true; // Assume ready for this first call
+                pursIdeIsReady = true;
                 const loadResult = await sendCommandToPursIde({ command: "load", params: {} });
                 logToStderr("Initial 'load' command to purs ide server successful.", "info");
-                resolve({ status_message: "purs ide server started and initial load attempted.", port: pursIdeServerPort, project_path: pursIdeProjectPath, initial_load_result: loadResult, logs: pursIdeLogBuffer });
+                const result = {
+                    status_message: "purs ide server started and initial load attempted.",
+                    port: pursIdeServerPort,
+                    project_path: pursIdeProjectPath,
+                    initial_load_result: loadResult,
+                    logs: pursIdeLogBuffer.slice(-20)
+                };
+                resolve({ content: [{ type: "text", text: JSON.stringify(result, null, 2) }] });
             } catch (error) {
                 pursIdeIsReady = false;
                 logToStderr(`Error during initial 'load' to purs ide server: ${error.message}`, "error");
-                if(pursIdeProcess) { pursIdeProcess.kill(); pursIdeProcess = null; }
-                reject(new Error(`purs ide server started but initial load command failed: ${error.message}`));
+                if(pursIdeProcess) { 
+                    pursIdeProcess.kill(); 
+                    pursIdeProcess = null; 
+                }
+                reject(new Error(`purs ide server started but initial load command failed: ${error.message}`)); // This error will be caught by handleMcpRequest
             }
-        }, 3000); // Wait for server to potentially start
+        }, 3000);
     });
 }
 
-async function handleStopPursIdeServer() {
+async function internalHandleStopPursIdeServer() {
+    let message;
     if (pursIdeProcess) {
-        pursIdeProcess.kill(); pursIdeProcess = null; pursIdeIsReady = false;
+        pursIdeProcess.kill(); 
+        pursIdeProcess = null; 
+        pursIdeIsReady = false;
         logPursIdeOutput("purs ide server stopped by MCP.", "info");
-        return { status_message: "purs ide server stopped." };
+        message = "purs ide server stopped.";
+    } else {
+        message = "No purs ide server was running.";
     }
-    return { status_message: "No purs ide server was running." };
+    return { content: [{ type: "text", text: JSON.stringify({ status_message: message }, null, 2) }] };
 }
 
-async function handleQueryPursIde(args) {
-    if (!pursIdeProcess || !pursIdeIsReady) throw new Error("purs ide server is not running or not ready. Please start it first.");
-    if (!args || typeof args.purs_ide_command !== 'string') throw new Error("Invalid input. 'purs_ide_command' (string) is required.");
-    return await sendCommandToPursIde({ command: args.purs_ide_command, params: args.purs_ide_params || {} });
+async function internalHandleQueryPursIde(args) {
+    if (!pursIdeProcess || !pursIdeIsReady) {
+        throw new Error("purs ide server is not running or not ready. Please start it first.");
+    }
+    if (!args || typeof args.purs_ide_command !== 'string') {
+        throw new Error("Invalid input. 'purs_ide_command' (string) is required.");
+    }
+    const result = await sendCommandToPursIde({ 
+        command: args.purs_ide_command, 
+        params: args.purs_ide_params || {} 
+    });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 }
 
-async function handleGenerateDependencyGraph(args) {
+async function internalHandleGenerateDependencyGraph(args) {
     if (!pursIdeProcess || !pursIdeIsReady) throw new Error("purs ide server is not running or not ready. Please start it first.");
     if (!treeSitterInitialized || !purescriptTsParser || !PureScriptLanguage) throw new Error("Tree-sitter parser for PureScript not initialized.");
     if (!args || !Array.isArray(args.target_modules) || args.target_modules.some(m => typeof m !== 'string')) {
@@ -452,67 +420,193 @@ async function handleGenerateDependencyGraph(args) {
             }
         };
         processUsageQueue.push(taskFn);
-
-        // Simple concurrent execution
         while(processUsageQueue.length > 0 || activePromises > 0) {
             while(processUsageQueue.length > 0 && activePromises < max_concurrent_requests) {
                 const taskToRun = processUsageQueue.shift();
-                if (taskToRun) taskToRun(); // Fire and forget for concurrency
+                if (taskToRun) taskToRun();
             }
-            await delay(50); // Yield if concurrency limit reached or queue empty but promises active
+            await delay(50);
         }
     }
     logToStderr(`[DepGraph]: Dependency graph generation complete.`, "info");
-    return { graph_nodes: graphNodesList };
+    const result = { graph_nodes: graphNodesList }; // graphNodesList is already the result
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 }
 
 
-// --- Main Stdio Processing Logic ---
-const toolHandlers = {
-    "get_manifest": handleGetManifest,
-    "get_server_status": handleGetServerStatus,
-    "echo": handleEcho,
-    "query_purescript_ast": handleQueryPurescriptAst,
-    "start_purs_ide_server": handleStartPursIdeServer,
-    "stop_purs_ide_server": handleStopPursIdeServer,
-    "query_purs_ide": handleQueryPursIde,
-    "generate_dependency_graph": handleGenerateDependencyGraph
+// --- Tool Definitions for 'tools/list' ---
+// Updated based on user feedback
+const TOOL_DEFINITIONS = [
+    {
+        name: "get_server_status", 
+        description: "Returns the current status of the server and its components.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    },
+    {
+        name: "echo",
+        description: "Echoes back the input string.",
+        inputSchema: { type: "object", properties: { message: { type: "string"}}, required: ["message"], additionalProperties: false },
+    },
+    {
+        name: "query_purescript_ast",
+        description: "Parses PureScript code and executes a Tree-sitter query against its AST.",
+        inputSchema: { type: "object", properties: { purescript_code: { type: "string" }, tree_sitter_query: { type: "string" }}, required: ["purescript_code", "tree_sitter_query"], additionalProperties: false },
+    },
+    {
+        name: "start_purs_ide_server",
+        description: "Starts a purs ide server process. Manages one server instance at a time.",
+        inputSchema: { 
+            type: "object", 
+            properties: { 
+                project_path: { type: "string" }, 
+                port: { type: "integer", default: 4242 }, 
+                output_directory: { type: "string", default: "output/" }, 
+                source_globs: { type: "array", items: { type: "string" }, default: ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"]}, 
+                log_level: { type: "string", enum: ["all", "debug", "perf", "none"], default: "none" }
+            },
+            additionalProperties: false
+        },
+    },
+    {
+        name: "stop_purs_ide_server",
+        description: "Stops the currently managed purs ide server process.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    },
+    {
+        name: "query_purs_ide",
+        description: "Sends a command to the currently running purs ide server.",
+        inputSchema: { type: "object", properties: { purs_ide_command: { type: "string" }, purs_ide_params: { type: "object" }}, required: ["purs_ide_command"], additionalProperties: false },
+    },
+    {
+        name: "generate_dependency_graph",
+        description: "Generates a dependency graph for specified PureScript modules.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                target_modules: { type: "array", items: { type: "string" }, description: "Array of module names." },
+                max_concurrent_requests: { type: "integer", description: "Max concurrent 'usages' requests.", default: 5 }
+            },
+            required: ["target_modules"],
+            additionalProperties: false
+        },
+    }
+];
+
+// SERVER_CAPABILITIES.tools should remain an empty object {}
+// The client will use 'tools/list' to get the full definitions.
+
+// Map internal tool names to their handlers
+const INTERNAL_TOOL_HANDLERS = {
+    "get_server_status": internalHandleGetServerStatus,
+    "echo": internalHandleEcho,
+    "query_purescript_ast": internalHandleQueryPurescriptAst,
+    "start_purs_ide_server": internalHandleStartPursIdeServer,
+    "stop_purs_ide_server": internalHandleStopPursIdeServer,
+    "query_purs_ide": internalHandleQueryPursIde,
+    "generate_dependency_graph": internalHandleGenerateDependencyGraph
 };
 
+
+// --- MCP Stdio Protocol Handling ---
+function createSuccessResponse(id, result) {
+    return { jsonrpc: '2.0', id, result };
+}
+
+function createErrorResponse(id, code, message, data = undefined) {
+    return { jsonrpc: '2.0', id, error: { code, message, data } };
+}
+
+// Updated handleMcpRequest based on user feedback
+async function handleMcpRequest(request) {
+    const { method, params, id } = request;
+
+    try {
+        if (method === 'initialize') {
+            logToStderr(`Received initialize request from client (id: ${id}). Params: ${JSON.stringify(params)}`, 'info');
+            return createSuccessResponse(id, {
+                protocolVersion: '2024-11-05',
+                serverInfo: SERVER_INFO,
+                capabilities: SERVER_CAPABILITIES // SERVER_CAPABILITIES.tools is now correctly an empty object
+            });
+        }
+        
+        if (method === 'initialized' || method === 'notifications/initialized') {
+            logToStderr(`Received initialized notification from client. Params: ${JSON.stringify(params)}`, 'info');
+            return null; 
+        }
+        
+        if (method === 'tools/list') {
+            return createSuccessResponse(id, { tools: TOOL_DEFINITIONS });
+        }
+        
+        if (method === 'tools/call') {
+            if (!params || typeof params.name !== 'string') {
+                return createErrorResponse(id, -32602, "Invalid params: 'name' of tool is required for tools/call.");
+            }
+            const toolName = params.name;
+            const toolArgs = params.arguments || {};
+
+            const handler = INTERNAL_TOOL_HANDLERS[toolName];
+            if (!handler) {
+                return createErrorResponse(id, -32601, `Method not found (tool): ${toolName}`);
+            }
+            
+            const result = await handler(toolArgs); // This now returns { content: [...] }
+            return createSuccessResponse(id, result); // The entire { content: [...] } is the result for tools/call
+        }
+
+        if (method === 'resources/list') {
+            return createSuccessResponse(id, { resources: [] });
+        }
+
+        if (method === 'resources/templates/list') {
+            return createSuccessResponse(id, { resourceTemplates: [] });
+        }
+
+        if (method === 'resources/read') {
+            return createErrorResponse(id, -32601, "No resources available to read");
+        }
+
+        return createErrorResponse(id, -32601, `Method not found: ${method}`);
+
+    } catch (error) {
+        logToStderr(`Error handling MCP request (method: ${method}, id: ${id}): ${error.message}\n${error.stack}`, 'error');
+        return createErrorResponse(id, -32000, `Server error: ${error.message}`, { stack: error.stack });
+    }
+}
+
+// Updated rl.on('line') handler based on user feedback
 const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout,
-    terminal: false // Ensures it doesn't try to use terminal features
+    output: process.stdout, 
+    terminal: false
 });
 
 rl.on('line', async (line) => {
+    logToStderr(`Received line: ${line.substring(0, 200)}...`, 'debug');
     let request;
     try {
+        if (line.trim() === '') return;
         request = JSON.parse(line);
     } catch (e) {
-        process.stdout.write(JSON.stringify({ status: "error", error: { message: "Invalid JSON input.", details: e.message } }) + '\\n');
+        const errResp = createErrorResponse(null, -32700, 'Parse error', { details: e.message, receivedLine: line });
+        process.stdout.write(JSON.stringify(errResp) + '\n');
         return;
     }
 
-    const { toolName, args, requestId } = request; // requestId is optional, for client tracking
-
-    if (!toolName || typeof toolName !== 'string') {
-        process.stdout.write(JSON.stringify({ status: "error", error: { message: "Missing or invalid 'toolName'." }, requestId }) + '\\n');
-        return;
+    if (typeof request.method !== 'string') { 
+         const errResp = createErrorResponse(request.id || null, -32600, 'Invalid Request: method must be a string.');
+         process.stdout.write(JSON.stringify(errResp) + '\n');
+         return;
     }
-
-    const handler = toolHandlers[toolName];
-    if (!handler) {
-        process.stdout.write(JSON.stringify({ status: "error", error: { message: `Tool '${toolName}' not found.` }, requestId }) + '\\n');
-        return;
-    }
-
-    try {
-        const result = await handler(args || {});
-        process.stdout.write(JSON.stringify({ status: "success", result, requestId }) + '\\n');
-    } catch (e) {
-        logToStderr(`Error executing tool '${toolName}': ${e.message}${e.stack ? '\\nStack: ' + e.stack : ''}`, 'error');
-        process.stdout.write(JSON.stringify({ status: "error", error: { message: e.message, details: e.stack }, requestId }) + '\\n');
+    
+    const response = await handleMcpRequest(request);
+    
+    if (response !== null && response !== undefined) {
+        process.stdout.write(JSON.stringify(response) + '\n');
+        logToStderr(`Sent response for id ${response.id}: ${JSON.stringify(response).substring(0,200)}...`, 'debug');
+    } else {
+        logToStderr(`Handled notification (method: ${request.method}). No response sent.`, 'debug');
     }
 });
 
@@ -526,10 +620,24 @@ rl.on('close', () => {
     process.exit(0);
 });
 
+// Graceful shutdown signals
+const shutdown = (signal) => {
+  logToStderr(`Received ${signal}. MCP Server shutting down...`, 'info');
+  if (pursIdeProcess) {
+    logToStderr("Stopping active purs ide server due to shutdown signal.", "warn");
+    pursIdeProcess.kill();
+  }
+  process.exit(0);
+};
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+
 async function main() {
-    logToStderr("PureScript MCP Stdio Server starting...", "info");
+    logToStderr("PureScript MCP Stdio Server (JSON-RPC) starting...", "info");
     await initializeTreeSitterParser();
-    logToStderr("Ready to process commands from stdin.", "info");
+    logToStderr("Ready to process JSON-RPC commands from stdin.", "info");
+    // Server waits for the client to send the first 'initialize' request.
 }
 
 main();

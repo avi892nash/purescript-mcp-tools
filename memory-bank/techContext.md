@@ -3,7 +3,7 @@
 ## 1. Technologies Used
 - **Primary Language:** Node.js (JavaScript).
 - **Package Manager:** npm.
-- **Stdio Handling:** Node.js `readline` module for reading line-by-line input from stdin.
+- **Stdio Handling & Protocol:** Node.js `readline` module for line-by-line stdio. JSON-RPC 2.0 for message structure and standard MCP methods.
 - **AST Parsing:** `web-tree-sitter` with `tree-sitter-purescript.wasm`.
 - **PureScript IDE Interaction:**
     - Node.js `child_process` module (specifically `spawn`) to manage the `purs ide server` process.
