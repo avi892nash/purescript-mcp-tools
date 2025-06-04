@@ -83,6 +83,32 @@ async function initializeTreeSitterParser() {
 function getNamespaceForDeclaration(declarationType) { /* ... */ }
 function getDeclarationId(decl) { /* ... */ }
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+// Helper to get code from input args (filePath or code string)
+async function getCodeFromInput(args, isModuleOriented = true) {
+    if (isModuleOriented) {
+        const hasFilePath = args && typeof args.filePath === 'string';
+        const hasCode = args && typeof args.code === 'string';
+
+        if ((hasFilePath && hasCode) || (!hasFilePath && !hasCode)) {
+            throw new Error("Invalid input: Exactly one of 'filePath' or 'code' must be provided for module-oriented tools.");
+        }
+        if (hasFilePath) {
+            try {
+                return await fs.readFile(args.filePath, 'utf-8');
+            } catch (e) {
+                throw new Error(`Failed to read file at ${args.filePath}: ${e.message}`);
+            }
+        }
+        return args.code;
+    } else { // Snippet-oriented
+        if (!args || typeof args.code !== 'string') {
+            throw new Error("Invalid input: 'code' (string) is required for snippet-oriented tools.");
+        }
+        return args.code;
+    }
+}
+
 // (Full implementations for getNamespaceForDeclaration and getDeclarationId are kept from previous version)
 getNamespaceForDeclaration = function(declarationType) {
   switch (declarationType) {
@@ -449,9 +475,182 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "query_purescript_ast",
-        description: "Parses PureScript code and executes a Tree-sitter query against its AST.",
+        description: "[DEPRECATED] Parses PureScript code and executes a Tree-sitter query against its AST. Prefer specific AST query tools.",
         inputSchema: { type: "object", properties: { purescript_code: { type: "string" }, tree_sitter_query: { type: "string" }}, required: ["purescript_code", "tree_sitter_query"], additionalProperties: false },
     },
+    // --- Phase 1: Core AST Query Tools ---
+    // Module Information
+    {
+        name: "getModuleName",
+        description: "Extracts the module name from a PureScript file or code string.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                filePath: { type: "string", description: "Absolute path to the PureScript file." },
+                code: { type: "string", description: "PureScript code string." }
+            },
+            additionalProperties: false,
+            description: "Exactly one of 'filePath' or 'code' must be provided."
+        }
+    },
+    {
+        name: "getImports",
+        description: "Retrieves all import statements with module and submodule information.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                filePath: { type: "string", description: "Absolute path to the PureScript file." },
+                code: { type: "string", description: "PureScript code string." }
+            },
+            additionalProperties: false,
+            description: "Exactly one of 'filePath' or 'code' must be provided."
+        }
+    },
+    // Function and Value Declarations
+    {
+        name: "getFunctionNames",
+        description: "Gets all function names defined in the code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getTypeSignatures",
+        description: "Extracts function type signatures from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getLetBindings",
+        description: "Finds variables bound in let expressions from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    // Data Types and Type Classes
+    {
+        name: "getDataTypes",
+        description: "Extracts data type declarations from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getTypeClasses",
+        description: "Gets type class declarations from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getInstances",
+        description: "Finds type class instances from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getTypeAliases",
+        description: "Extracts type alias declarations from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    // Expressions and Literals
+    {
+        name: "getStringLiterals",
+        description: "Finds all string literals in a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getIntegerLiterals",
+        description: "Extracts all integer literals from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getVariableReferences",
+        description: "Gets all variable names used in expressions in a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getRecordFields",
+        description: "Extracts record field information from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    // Control Flow Analysis
+    {
+        name: "getCasePatterns",
+        description: "Analyzes case expression patterns from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getDoBindings",
+        description: "Finds variable bindings in do blocks from a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "getWhereBindings",
+        description: "Extracts function names from where clauses in a code snippet.",
+        inputSchema: {
+            type: "object",
+            properties: { code: { type: "string", description: "PureScript code snippet." } },
+            required: ["code"],
+            additionalProperties: false
+        }
+    },
+    // End of Phase 1 tools
     {
         name: "start_purs_ide_server",
         description: "Starts a purs ide server process. Manages one server instance at a time.",
@@ -503,7 +702,405 @@ const INTERNAL_TOOL_HANDLERS = {
     "start_purs_ide_server": internalHandleStartPursIdeServer,
     "stop_purs_ide_server": internalHandleStopPursIdeServer,
     "query_purs_ide": internalHandleQueryPursIde,
-    "generate_dependency_graph": internalHandleGenerateDependencyGraph
+    "generate_dependency_graph": internalHandleGenerateDependencyGraph,
+    // --- Phase 1: Core AST Query Tool Handlers (to be added) ---
+    "getModuleName": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, true);
+        const tree = purescriptTsParser.parse(code);
+        // Corrected query to capture the full text of the qualified_module node
+        const query = new Query(PureScriptLanguage, `(purescript name: (qualified_module) @module.qname)`);
+        const captures = query.captures(tree.rootNode);
+        if (captures.length > 0 && captures[0].name === 'module.qname') {
+            // The text of the qualified_module node itself is the full module name
+            return { content: [{ type: "text", text: JSON.stringify(captures[0].node.text.replace(/\s+/g, ''), null, 2) }] };
+        }
+        return { content: [{ type: "text", text: JSON.stringify(null, null, 2) }] };
+    },
+    "getFunctionNames": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const query = new Query(PureScriptLanguage, `(function name: (variable) @func.name)`);
+        const captures = query.captures(tree.rootNode);
+        const functionNames = captures.map(capture => capture.node.text);
+        return { content: [{ type: "text", text: JSON.stringify(functionNames, null, 2) }] };
+    },
+    // Stubs for other Phase 1 handlers - to be implemented
+    "getImports": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, true);
+        const tree = purescriptTsParser.parse(code);
+        const query = new Query(PureScriptLanguage, `(import module: (qualified_module) @import.path)`);
+        const captures = query.captures(tree.rootNode);
+        
+        const imports = [];
+        for (const capture of captures) {
+            if (capture.name === 'import.path') {
+                const moduleNodes = capture.node.children.filter(child => child.type === 'module');
+                if (moduleNodes.length > 0) {
+                    const fullPath = moduleNodes.map(n => n.text).join('.');
+                    const moduleName = moduleNodes[0].text;
+                    const submoduleName = moduleNodes.length > 1 ? moduleNodes[1].text : undefined;
+                    imports.push({
+                        module: moduleName,
+                        submodule: submoduleName,
+                        fullPath: fullPath
+                    });
+                }
+            }
+        }
+        return { content: [{ type: "text", text: JSON.stringify(imports, null, 2) }] };
+    },
+    "getTypeSignatures": async (args) => {
+    if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+    const code = await getCodeFromInput(args, false);
+    const tree = purescriptTsParser.parse(code);
+    
+    // Query to capture the full text of signature nodes
+    const querySource = `((signature) @full_signature)`; 
+    const query = new Query(PureScriptLanguage, querySource);
+    // Use query.captures() for named captures as we are interested in the named capture @full_signature
+    const captures = query.captures(tree.rootNode);
+
+    const typeSignatures = captures.map(capture => {
+        // Ensure we are processing the intended capture
+        if (capture.name === 'full_signature') { 
+            return capture.node.text.trim(); // Get the full text of the signature node
+        }
+        return null;
+    }).filter(Boolean); // Filter out any nulls if other (unexpected) captures were included
+    
+    return { content: [{ type: "text", text: JSON.stringify(typeSignatures, null, 2) }] };
+},
+    "getLetBindings": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const letBindings = [];
+
+        // Query for 'let ... in ...' expressions
+        const letInQuery = new Query(PureScriptLanguage, `(exp_let_in (declarations (function name: (variable) @let.name)))`);
+        const letInCaptures = letInQuery.captures(tree.rootNode);
+        letInCaptures.forEach(capture => {
+            if (capture.name === 'let.name') {
+                letBindings.push({ name: capture.node.text, context: "let" });
+            }
+        });
+
+        // Query for 'let' statements in 'do' blocks
+        const doLetQuery = new Query(PureScriptLanguage, `(statement (let (declarations (function name: (variable) @do.let.name))))`);
+        const doLetCaptures = doLetQuery.captures(tree.rootNode);
+        doLetCaptures.forEach(capture => {
+            if (capture.name === 'do.let.name') {
+                letBindings.push({ name: capture.node.text, context: "do-let" });
+            }
+        });
+        
+        return { content: [{ type: "text", text: JSON.stringify(letBindings, null, 2) }] };
+    },
+    "getDataTypes": async (args) => {
+    if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+    const code = await getCodeFromInput(args, false);
+    const tree = purescriptTsParser.parse(code);
+    
+    // Single query to find all data declarations with their components
+    // ... inside getDataTypes
+
+// Query for the entire data declaration block
+    const query = new Query(PureScriptLanguage, `
+        (data
+        name: (type) @type_name
+        ) @data_declaration_block
+    `);
+
+    const matches = query.matches(tree.rootNode);
+    const dataTypes = [];
+
+    for (const match of matches) {
+        let typeName = null;
+        let dataDeclarationNode = null;
+
+        // Find the type name and the data declaration block node
+        for (const capture of match.captures) {
+            if (capture.name === 'type_name') {
+                typeName = capture.node.text;
+            }
+            if (capture.name === 'data_declaration_block') {
+                dataDeclarationNode = capture.node;
+            }
+        }
+
+        if (typeName && dataDeclarationNode) {
+            const constructors = [];
+            // Now, traverse the children of the dataDeclarationNode to find constructors
+            for (const child of dataDeclarationNode.children) {
+                if (child.type === 'constructor') {
+                    constructors.push(child.text);
+                }
+            }
+            dataTypes.push({
+                name: typeName,
+                constructors: constructors.sort()
+            });
+        }
+    }
+
+    return { content: [{ type: "text", text: JSON.stringify(dataTypes, null, 2) }] };
+},
+    "getTypeClasses": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const typeClasses = [];
+        
+        const query = new Query(PureScriptLanguage, `
+            (class_declaration
+              (class_head
+                (class_name (type) @class.name)
+                (type_variable)* @type.param
+              )
+            )
+        `); 
+        
+        const matches = query.matches(tree.rootNode);
+        matches.forEach(match => {
+            let currentClassName = null;
+            const currentParams = [];
+            match.captures.forEach(cap => {
+                if (cap.name === 'class.name') {
+                    currentClassName = cap.node.text;
+                } else if (cap.name === 'type.param') {
+                    currentParams.push(cap.node.text);
+                }
+            });
+            if (currentClassName) {
+                typeClasses.push({
+                    name: currentClassName,
+                    typeParameter: currentParams.join(' ') || undefined
+                });
+            }
+        });
+        
+        return { content: [{ type: "text", text: JSON.stringify(typeClasses, null, 2) }] };
+    },
+    "getInstances": async (args) => {
+         if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const instances = [];
+       
+    const query = new Query(PureScriptLanguage, `
+        (class_instance
+            (instance_name)? @instance.name
+            (instance_head
+                (class_name) @instance.class
+                (type_name)? @instance.type
+            )
+        )
+    `);
+
+        const matches = query.matches(tree.rootNode);
+
+        for (const match of matches) {
+            let instance = {
+                name: undefined, 
+                className: null,
+                type: undefined
+            };
+            for (const capture of match.captures) {
+                const node = capture.node;
+                const captureName = capture.name;
+
+                if (captureName === 'instance.name') {
+                    instance.name = node.text.trim();
+                } else if (captureName === 'instance.class') {
+                    instance.className = node.text.trim();
+                } else if (captureName === 'instance.type') {
+                    instance.type = node.text.trim();
+                }
+            }
+            if (instance.className) { 
+                instances.push(instance);
+            }
+        }
+        return { content: [{ type: "text", text: JSON.stringify(instances, null, 2) }] };
+    },
+    "getTypeAliases": async (args) => { 
+        if (!treeSitterInitialized) {
+            throw new Error("Tree-sitter not initialized.");
+        }
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const typeAliasesTexts = [];
+    
+        const query = new Query(PureScriptLanguage, `(type_alias) @alias_declaration`);
+        const matches = query.matches(tree.rootNode);
+    
+        for (const match of matches) {
+            const aliasNodeCapture = match.captures.find(c => c.name === 'alias_declaration');
+            if (aliasNodeCapture) {
+                 typeAliasesTexts.push(aliasNodeCapture.node.text.trim()); 
+            }
+        }
+        return { content: [{ type: "text", text: JSON.stringify(typeAliasesTexts, null, 2) }] };
+    },
+    "getStringLiterals": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const stringLiterals = [];
+        
+        const query = new Query(PureScriptLanguage, `(string) @string.literal`);
+        const captures = query.captures(tree.rootNode);
+        
+        captures.forEach(capture => {
+            if (capture.name === 'string.literal') {
+                // Remove surrounding quotes
+                let text = capture.node.text;
+                if (text.startsWith('"') && text.endsWith('"')) {
+                    text = text.substring(1, text.length - 1);
+                } else if (text.startsWith('"""') && text.endsWith('"""')) {
+                    text = text.substring(3, text.length - 3);
+                }
+                stringLiterals.push(text);
+            }
+        });
+        return { content: [{ type: "text", text: JSON.stringify(stringLiterals, null, 2) }] };
+    },
+    "getIntegerLiterals": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const integerLiterals = [];
+
+        const query = new Query(PureScriptLanguage, `(integer) @integer.literal`);
+        const captures = query.captures(tree.rootNode);
+
+        captures.forEach(capture => {
+            if (capture.name === 'integer.literal') {
+                integerLiterals.push(parseInt(capture.node.text, 10));
+            }
+        });
+        return { content: [{ type: "text", text: JSON.stringify(integerLiterals, null, 2) }] };
+    },
+    "getVariableReferences": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const variableReferences = [];
+        
+        const query = new Query(PureScriptLanguage, `(exp_name (variable) @var)`);
+        const captures = query.captures(tree.rootNode);
+        
+        captures.forEach(capture => {
+            if (capture.name === 'var') {
+                variableReferences.push(capture.node.text);
+            }
+        });
+        // Deduplicate
+        return { content: [{ type: "text", text: JSON.stringify([...new Set(variableReferences)], null, 2) }] };
+    },
+    "getRecordFields": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const recordFields = [];
+
+        // Record literal fields
+        const literalQuery = new Query(PureScriptLanguage, `(record_field (field_name) @field.name.literal)`);
+        const literalCaptures = literalQuery.captures(tree.rootNode);
+        literalCaptures.forEach(capture => {
+            if (capture.name === 'field.name.literal') {
+                recordFields.push({ name: capture.node.text, context: "literal" });
+            }
+        });
+
+        // Record type fields
+        const typeQuery = new Query(PureScriptLanguage, `(row_field (field_name) @field.name.type)`);
+        const typeCaptures = typeQuery.captures(tree.rootNode);
+        typeCaptures.forEach(capture => {
+            if (capture.name === 'field.name.type') {
+                recordFields.push({ name: capture.node.text, context: "type" });
+            }
+        });
+        
+        // Deduplicate based on name and context
+        const uniqueFields = [];
+        const seen = new Set();
+        for (const field of recordFields) {
+            const key = `${field.name}|${field.context}`;
+            if (!seen.has(key)) {
+                uniqueFields.push(field);
+                seen.add(key);
+            }
+        }
+        return { content: [{ type: "text", text: JSON.stringify(uniqueFields, null, 2) }] };
+    },
+    "getCasePatterns": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const casePatternsTexts = [];
+    
+        const query = new Query(PureScriptLanguage, `(alt pat: (_) @pattern_node)`);
+        const matches = query.matches(tree.rootNode);
+    
+        for (const match of matches) {
+            const patternNodeCapture = match.captures.find(c => c.name === 'pattern_node');
+            if (patternNodeCapture) {
+                casePatternsTexts.push(patternNodeCapture.node.text.trim());
+            }
+        }
+        return { content: [{ type: "text", text: JSON.stringify(casePatternsTexts, null, 2) }] };
+    },
+    "getDoBindings": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const doBindings = [];
+
+        // Query for '<-' bindings
+        const bindQuery = new Query(PureScriptLanguage, `(bind_pattern (pat_name (variable) @do.binding))`);
+        const bindCaptures = bindQuery.captures(tree.rootNode);
+        bindCaptures.forEach(capture => {
+            if (capture.name === 'do.binding') {
+                doBindings.push({ variable: capture.node.text, bindingType: "bind" });
+            }
+        });
+
+        // Query for 'let' statements in 'do' blocks
+        const doLetQuery = new Query(PureScriptLanguage, `(statement (let (declarations (function name: (variable) @do.let.name))))`);
+        const doLetCaptures = doLetQuery.captures(tree.rootNode);
+        doLetCaptures.forEach(capture => {
+            if (capture.name === 'do.let.name') {
+                 // Ensure this 'let' is within a 'do' block context if possible, though the query is fairly specific.
+                 // For now, assume this query correctly targets 'let' in 'do'.
+                doBindings.push({ variable: capture.node.text, bindingType: "let" });
+            }
+        });
+        
+        return { content: [{ type: "text", text: JSON.stringify(doBindings, null, 2) }] };
+    },
+    "getWhereBindings": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, false);
+        const tree = purescriptTsParser.parse(code);
+        const whereBindingNames = [];
+    
+        const query = new Query(PureScriptLanguage, `(where) (declarations (function name: (variable) @binding_name))`);
+        const matches = query.matches(tree.rootNode);
+    
+        for (const match of matches) {
+            const bindingNameCapture = match.captures.find(c => c.name === 'binding_name');
+            if (bindingNameCapture) {
+                whereBindingNames.push(bindingNameCapture.node.text.trim());
+            }
+        }
+        // Deduplicate if necessary, though the query structure might already handle it per 'where' block.
+        // For simplicity, returning as is, assuming test will handle order/duplicates if they arise.
+        return { content: [{ type: "text", text: JSON.stringify([...new Set(whereBindingNames)], null, 2) }] };
+    }
 };
 
 

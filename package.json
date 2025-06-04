@@ -13,8 +13,6 @@
   "description": "",
   "dependencies": {
     "chalk": "^4.1.2",
-    "express": "^5.1.0",
-    "node-fetch": "^2.7.0",
     "web-tree-sitter": "^0.25.5"
   }
 }

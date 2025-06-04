@@ -5,10 +5,13 @@
 - **Initial Focus:** Boilerplate server, basic "echo" tool, Memory Bank setup.
 
 ## Key Technical Decisions & Patterns
-- **Server Technology:** Node.js with Express.js for HTTP handling (initial assumption for MCP).
+- **Server Technology:** Node.js script communicating via stdio using JSON-RPC 2.0 (evolved from initial HTTP assumption).
 - **Memory Bank:** Core set of Markdown files (`projectbrief.md`, `productContext.md`, `systemPatterns.md`, `techContext.md`, `activeContext.md`, `progress.md`) are mandatory and must be kept up-to-date.
-- **MCP Configuration:** `mcp-config.json` will be used for server and tool registration.
-- **PureScript Interaction:** Initially minimal, with a `purescript-test-examples` directory for future use and basic validation.
+- **MCP Configuration:** `mcp-config.json` for executable tool provider registration.
+- **PureScript Interaction:**
+    - Management of `purs ide server` as a child process.
+    - Extensive AST querying capabilities via a suite of granular tools (e.g., `getModuleName`, `getFunctionNames`, etc.) using `web-tree-sitter`.
+- **PureScript Test Examples:** `purescript-test-examples` directory for testing server functionalities.
 
 ## Workflow Preferences
 - **Memory Bank First:** Always ensure Memory Bank files are created/updated before significant code changes or when context shifts.
@@ -27,17 +30,22 @@
 - `write_to_file`: Used for creating new files (like Memory Bank docs, initial code files, documentation).
 - `execute_command`: Used for `npm init`, `npm install`, running the server, and Git operations.
 - `replace_in_file`: Preferred for modifying existing files once they are created.
+- **AST Query Tools:** Prefer the new specific AST query tools (e.g., `getModuleName`, `getImports`, `getFunctionNames`) over the deprecated `query_purescript_ast`. Note their differentiated input: module-level tools take `{filePath?: string, code?: string}` while snippet-level tools take `{code: string}`.
+    - Recent fixes (March 2025) addressed issues in `getModuleName`, `getDataTypes`, `getTypeClasses`, and `getInstances`. `getTypeSignatures` was refactored and needs re-testing.
 
 ## Important Reminders for Cline
-- **Memory Reset:** My memory is reset between sessions. The Memory Bank and `INSTALL.md` (for understanding setup if needed) are CRUCIAL for re-orienting myself to this project.
+- **Memory Reset:** My memory is reset between sessions. The Memory Bank (especially `activeContext.md` and `progress.md`) and `INSTALL.md` are CRUCIAL for re-orienting myself.
 - **File Paths:** All paths are relative to the project root (`/Users/avinash.verma/Juspay/what-is-purs`).
 - **User Confirmation:** Wait for user confirmation after each tool use.
 - **`mcp-config.json` Structure:** This file defines how I discover and use the server's tools.
-- **PureScript Tooling:** `purs ide` interaction is a core feature.
+- **PureScript Tooling:** `purs ide` interaction and the new AST query tools are core features.
 - **Installation Prompts:**
     - For any user/developer (including a new AI instance or myself if setting up from scratch): The prompt must include the `git clone` command and direct them to `INSTALL.md`.
+- **Testing:** `run_tests.js` has been updated to use JSON-RPC 2.0 and includes comprehensive tests for the new AST query tools (Phase 1).
 
 ## Evolution of Project Decisions
 - Established `main` as the primary Git branch.
 - Consolidated installation instructions into a single `INSTALL.md` file.
 - Successfully configured and pushed to the Bitbucket remote.
+- Shifted from HTTP server to stdio-based JSON-RPC 2.0 MCP server.
+- Replaced generic `query_purescript_ast` tool with a suite of specific, granular AST query tools (Phase 1 implemented).

@@ -34,7 +34,7 @@ graph LR
 ## 2. Key Technical Decisions
 - **Language:** Node.js for the MCP server (JavaScript).
 - **MCP Communication:** Utilizes stdio, adhering to JSON-RPC 2.0 for message structure and standard MCP methods (`initialize`, `tools/list`, `tools/call`).
-- **AST Querying:** Employs direct AST parsing for PureScript code analysis (specific library detailed in Tech Context).
+- **AST Querying:** Provides a suite of granular tools for direct AST parsing and analysis of PureScript code (e.g., `getModuleName`, `getFunctionNames`, `getStringLiterals`, etc.), replacing a single generic query tool. Uses `web-tree-sitter` (details in Tech Context).
 - **PureScript IDE Interaction:**
     - The MCP server manages a `purs ide server` as a child process.
     - Communication with `purs ide server` is via TCP sockets, sending/receiving JSON.
@@ -52,9 +52,15 @@ graph LR
 - **PureScript MCP Server (Node.js Script):** The main application, run as a command-line tool.
     - Implements MCP stdio protocol (JSON-RPC 2.0).
     - Handles standard MCP methods (`initialize`, `tools/list`, `tools/call`).
-    - Internally maps `tools/call` requests to specific tool handlers: `get_server_status`, `echo`, `query_purescript_ast`, `start_purs_ide_server`, `stop_purs_ide_server`, `query_purs_ide`, `generate_dependency_graph`.
+    - Internally maps `tools/call` requests to specific tool handlers including:
+        - Server management: `get_server_status`, `start_purs_ide_server`, `stop_purs_ide_server`
+        - Basic: `echo`
+        - PureScript IDE interaction: `query_purs_ide`
+        - Advanced analysis: `generate_dependency_graph`
+        - Granular AST querying (Phase 1): `getModuleName`, `getImports`, `getFunctionNames`, `getTypeSignatures`, `getLetBindings`, `getDataTypes`, `getTypeClasses`, `getInstances`, `getTypeAliases`, `getStringLiterals`, `getIntegerLiterals`, `getVariableReferences`, `getRecordFields`, `getCasePatterns`, `getDoBindings`, `getWhereBindings`.
+        - (Deprecated: `query_purescript_ast`)
     - Manages the `purs ide server` child process.
-    - Uses `web-tree-sitter` for AST queries.
+    - Uses `web-tree-sitter` for the AST query tools.
 - **`purs ide server` (Child Process):**
     - A standard PureScript tooling server.
     - Communicates with the MCP server over TCP.
