@@ -4,17 +4,18 @@
 - **Core Script Logic (`index.js`):**
     - Adheres to JSON-RPC 2.0 over stdio.
     - Implements standard MCP methods: `initialize`, `tools/list`, `tools/call`.
-    - **New Granular AST Query Tools (Phase 1):**
+    - **Refined Direct `purs ide` Command Wrappers (focused on context gathering):**
+        - `pursIdeLoad`, `pursIdeType`, `pursIdeRebuild`, `pursIdeUsages`, `pursIdeList`, `pursIdeCwd`, `pursIdeReset`, `pursIdeQuit` are implemented.
+        - Removed `pursIdeImport`, `pursIdeCaseSplit`, `pursIdeAddClause`, and `pursIdeComplete`.
+    - **Granular AST Query Tools (Phase 1):**
         - `getModuleName`, `getImports`, `getFunctionNames`, `getTypeSignatures`, `getLetBindings`, `getDataTypes`, `getTypeClasses`, `getInstances`, `getTypeAliases`, `getStringLiterals`, `getIntegerLiterals`, `getVariableReferences`, `getRecordFields`, `getCasePatterns`, `getDoBindings`, `getWhereBindings` are implemented.
-        - Fixes applied to `getModuleName`, `getDataTypes`, `getTypeClasses`, `getInstances` based on initial test feedback. `getTypeSignatures` was already refactored and is pending re-test.
-        - These tools support differentiated input (`filePath`/`code` for module-level, `code` for snippets).
-    - Existing tool handlers (`echo`, `get_server_status`, `start_purs_ide_server`, etc.) remain functional.
-    - `query_purescript_ast` tool is marked as deprecated.
+    - Existing tool handlers (`echo`, `get_server_status`, `start_purs_ide_server`, `stop_purs_ide_server`, `generate_dependency_graph`) remain functional.
+    - `query_purescript_ast` tool is marked as deprecated. `query_purs_ide` is still available but its direct use should be less frequent.
     - Logging directed to stderr.
 - **MCP Configuration (`mcp-config.json`):**
     - Configured for `type: "executable"` with `command: "node index.js"`.
 - **Memory Bank Core:**
-    - All core Memory Bank files (`projectbrief.md`, `productContext.md`, `techContext.md`, `systemPatterns.md`, `activeContext.md`, `progress.md`) are up-to-date.
+    - All core Memory Bank files (`projectbrief.md`, `productContext.md`, `techContext.md`, `systemPatterns.md`, `activeContext.md`, `progress.md`) are up-to-date with the latest changes.
 - **Node.js Project Setup:**
     - `package.json` defines dependencies. `express` and `node-fetch` are still listed but likely unused.
     - `web-tree-sitter`, `chalk`, `fs.promises`, `readline` are actively used.
@@ -22,28 +23,30 @@
     - Remains a compiled Spago project, usable as a testbed.
 - **Testing (`run_tests.js`):**
     - Rewritten to use JSON-RPC 2.0 over stdio.
-    - Includes comprehensive tests for all new AST query tools (Phase 1), based on the provided test document.
+    - Includes comprehensive tests for all Phase 1 AST query tools.
+    - **Needs to be updated to include tests for the new `pursIde*` wrapper tools.**
 - **Documentation:**
-    - `INSTALL.md` updated for JSON-RPC 2.0 and new AST tools.
-    - `.clinerules` updated to reflect recent fixes and test script status.
+    - `INSTALL.md` updated for JSON-RPC 2.0 and AST tools.
+    - `.clinerules` updated.
+    - `systemPatterns.md` and `activeContext.md` updated to reflect new `pursIde*` tools.
 
 ## 2. What's Left to Build (Immediate Tasks)
-- **Verify Fixes:** Run the updated `run_tests.js` to confirm the fixes for AST tools and ensure all tests pass.
+- **Test New `pursIde*` Wrappers:** Update `run_tests.js` to include tests for all the newly added `pursIdeLoad`, `pursIdeComplete`, etc., tools. Execute tests to verify their functionality.
 - **Review `package.json`:** Confirm and remove unused dependencies (e.g., `express`, `node-fetch`).
-- **Implement Phase 2 & 3 of AST API:**
+- **Consider Deprecating `query_purs_ide`:** Evaluate if the generic `query_purs_ide` tool should be formally deprecated in `TOOL_DEFINITIONS` now that specific wrappers are in place.
+- **Implement Phase 2 & 3 of AST API (Lower Priority for now):**
     - Utility functions: `getDefinitionLocations`, `getUsageLocations`, `validateSyntax`.
     - Advanced queries: `getExportList`, `getDependencyGraph` (refine existing), `getComplexityMetrics`.
     - Batch operations: `analyzeFile`, `findPattern`.
-- **Commit and Push Changes:** After Phase 1 testing and documentation updates are satisfactory.
+- **Commit and Push Changes:** After testing of `pursIde*` tools and documentation updates are satisfactory.
 
 ## 3. Current Status
-- The `index.js` script includes fixes for several AST tools based on initial test results.
-- `run_tests.js` has been significantly updated to use JSON-RPC 2.0 and cover all Phase 1 AST tools.
-- Core Memory Bank documents, `INSTALL.md`, and `.clinerules` have been updated.
-- **The fixes for AST tools and the updated test script are pending execution and verification.**
-- The `tools/call` response format for all tools is ` { content: [{ type: "text", text: JSON.stringify(tool_specific_result, null, 2) }] }` which is compatible with MCP client expectations.
+- The `index.js` script now includes a comprehensive set of MCP tools that wrap common `purs ide` server commands, in addition to the existing AST query tools.
+- Core Memory Bank documents (`systemPatterns.md`, `activeContext.md`) have been updated to reflect these additions. `progress.md` is being updated now.
+- **The new `pursIde*` tools are pending testing.**
+- The `tools/call` response format for all tools is ` { content: [{ type: "text", text: JSON.stringify(tool_specific_result, null, 2) }] }`.
 
 ## 4. Known Issues
 - The `tree-sitter-purescript.wasm` file must be present in the project root. (By design).
-- The `purs ide server` management logic and the `generate_dependency_graph` tool need thorough testing, especially if the `purescript-test-examples` project is not pre-compiled.
-- The `getTypeSignatures` tool's refactored implementation needs to be confirmed by the updated tests.
+- The `purs ide server` management logic (`start_purs_ide_server`, `stop_purs_ide_server`) and the `generate_dependency_graph` tool need ongoing thorough testing, especially with various states of the `purescript-test-examples` project (e.g., not pre-compiled).
+- The `getTypeSignatures` tool's refactored implementation needs to be confirmed by the updated tests (part of AST tools testing).

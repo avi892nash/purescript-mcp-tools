@@ -506,6 +506,19 @@ const TOOL_DEFINITIONS = [
             description: "Exactly one of 'filePath' or 'code' must be provided."
         }
     },
+    {
+        name: "getTopLevelDeclarationNames",
+        description: "Extracts the names of all top-level declarations (functions, data types, type classes, etc.) from a PureScript file or code string.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                filePath: { type: "string", description: "Absolute path to the PureScript file." },
+                code: { type: "string", description: "PureScript code string." }
+            },
+            additionalProperties: false,
+            description: "Exactly one of 'filePath' or 'code' must be provided."
+        }
+    },
     // Function and Value Declarations
     {
         name: "getFunctionNames",
@@ -688,6 +701,92 @@ const TOOL_DEFINITIONS = [
             required: ["target_modules"],
             additionalProperties: false
         },
+    },
+    // --- purs ide direct command wrappers ---
+    {
+        name: "pursIdeLoad",
+        description: "Loads modules into the purs ide server. Typically the first command after server start.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                modules: { 
+                    type: "array", 
+                    items: { type: "string" },
+                    description: "Optional: specific modules to load. If omitted, attempts to load all compiled modules."
+                }
+            },
+            additionalProperties: false
+        }
+    },
+    {
+        name: "pursIdeType",
+        description: "Looks up the type of a given identifier using purs ide server.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                search: { type: "string", description: "Identifier name to search for." },
+                filters: { type: "array", items: { type: "object" }, description: "Optional: Array of Filter objects." },
+                currentModule: { type: "string", description: "Optional: Current module context." }
+            },
+            required: ["search"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "pursIdeCwd",
+        description: "Gets the current working directory of the purs ide server.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false }
+    },
+    {
+        name: "pursIdeReset",
+        description: "Clears loaded modules in the purs ide server.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false }
+    },
+    {
+        name: "pursIdeQuit",
+        description: "Requests the purs ide server to quit and stops the managed process.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false }
+    },
+    {
+        name: "pursIdeRebuild",
+        description: "Provides a fast rebuild for a single module using purs ide server.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                file: { type: "string", description: "Path to the module to rebuild, or 'data:' prefixed source code." },
+                actualFile: { type: "string", description: "Optional: Real path if 'file' is 'data:' or a temp file." },
+                codegen: { type: "array", items: { type: "string" }, description: "Optional: Codegen targets (e.g., 'js', 'corefn'). Defaults to ['js']." }
+            },
+            required: ["file"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "pursIdeUsages",
+        description: "Finds all usages of a uniquely identified declaration using purs ide server.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                module: { type: "string", description: "Module where the identifier is defined." },
+                namespace: { type: "string", enum: ["value", "type", "kind"], description: "Namespace of the identifier." },
+                identifier: { type: "string", description: "The identifier to find usages for." }
+            },
+            required: ["module", "namespace", "identifier"],
+            additionalProperties: false
+        }
+    },
+    {
+        name: "pursIdeList",
+        description: "Lists available modules or imports for a file using purs ide server.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                listType: { type: "string", enum: ["availableModules", "import"], description: "Type of list to retrieve." },
+                file: { type: "string", description: "Path to the .purs file (required for 'import' listType)." }
+            },
+            required: ["listType"],
+            additionalProperties: false
+        }
     }
 ];
 
@@ -751,6 +850,29 @@ const INTERNAL_TOOL_HANDLERS = {
             }
         }
         return { content: [{ type: "text", text: JSON.stringify(imports, null, 2) }] };
+    },
+    "getTopLevelDeclarationNames": async (args) => {
+        if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
+        const code = await getCodeFromInput(args, true); // true for module-oriented
+        const tree = purescriptTsParser.parse(code);
+        const querySource = `
+[
+  (function name: (variable) @name)
+  (data name: (type) @name)
+  (class_declaration (class_head (class_name (type) @name)))
+  (type_alias name: (type) @name)
+  (foreign_import name: (variable) @name)
+  (signature name: (variable) @name)
+  (class_instance (instance_name) @name)
+  (kind_value_declaration name: (type) @name)
+]
+`;
+        const query = new Query(PureScriptLanguage, querySource);
+        const captures = query.captures(tree.rootNode);
+        const declarationNames = captures.map(capture => capture.node.text).filter(Boolean);
+        // Deduplicate names
+        const uniqueNames = [...new Set(declarationNames)];
+        return { content: [{ type: "text", text: JSON.stringify(uniqueNames, null, 2) }] };
     },
     "getTypeSignatures": async (args) => {
     if (!treeSitterInitialized) throw new Error("Tree-sitter not initialized.");
@@ -1100,6 +1222,92 @@ const INTERNAL_TOOL_HANDLERS = {
         // Deduplicate if necessary, though the query structure might already handle it per 'where' block.
         // For simplicity, returning as is, assuming test will handle order/duplicates if they arise.
         return { content: [{ type: "text", text: JSON.stringify([...new Set(whereBindingNames)], null, 2) }] };
+    },
+    // --- New purs ide command wrapper handlers ---
+    "pursIdeLoad": async (args) => {
+        const params = args || {}; // If args is null/undefined, pass empty object for default load all
+        const result = await sendCommandToPursIde({ command: "load", params });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+    "pursIdeType": async (args) => {
+        if (!args || typeof args.search !== 'string') {
+            throw new Error("Invalid input: 'search' (string) is required for pursIdeType.");
+        }
+        const params = {
+            search: args.search,
+            filters: args.filters || [], // Default to empty filters array
+            currentModule: args.currentModule
+        };
+        const result = await sendCommandToPursIde({ command: "type", params });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+    "pursIdeCwd": async () => {
+        const result = await sendCommandToPursIde({ command: "cwd" });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+    "pursIdeReset": async () => {
+        const result = await sendCommandToPursIde({ command: "reset" });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+    "pursIdeQuit": async () => {
+        let quitMessage = "purs ide server quit command sent.";
+        try {
+            const result = await sendCommandToPursIde({ command: "quit" });
+            quitMessage += ` Response: ${JSON.stringify(result)}`;
+        } catch (error) {
+            quitMessage += ` Error sending quit command: ${error.message}`;
+            logToStderr(quitMessage, "warn");
+            // Still attempt to stop the process
+        }
+        // Ensure our managed process is also stopped
+        if (pursIdeProcess) {
+            pursIdeProcess.kill();
+            pursIdeProcess = null;
+            pursIdeIsReady = false;
+            logPursIdeOutput("purs ide server process stopped by pursIdeQuit tool.", "info");
+            quitMessage += " Managed purs ide process also stopped.";
+        } else {
+            quitMessage += " No managed purs ide process was running to stop.";
+        }
+        return { content: [{ type: "text", text: JSON.stringify({ status_message: quitMessage }, null, 2) }] };
+    },
+    "pursIdeRebuild": async (args) => {
+        if (!args || typeof args.file !== 'string') {
+            throw new Error("Invalid input: 'file' (string) is required for pursIdeRebuild.");
+        }
+        const params = {
+            file: args.file,
+            actualFile: args.actualFile,
+            codegen: args.codegen // purs ide server defaults to js if undefined
+        };
+        const result = await sendCommandToPursIde({ command: "rebuild", params });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+    "pursIdeUsages": async (args) => {
+        if (!args || typeof args.module !== 'string' || typeof args.namespace !== 'string' || typeof args.identifier !== 'string') {
+            throw new Error("Invalid input: 'module', 'namespace', and 'identifier' (strings) are required for pursIdeUsages.");
+        }
+        const params = {
+            module: args.module,
+            namespace: args.namespace,
+            identifier: args.identifier
+        };
+        const result = await sendCommandToPursIde({ command: "usages", params });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+    "pursIdeList": async (args) => {
+        if (!args || typeof args.listType !== 'string') {
+            throw new Error("Invalid input: 'listType' (string) is required for pursIdeList.");
+        }
+        const params = { type: args.listType };
+        if (args.listType === "import") {
+            if (typeof args.file !== 'string') {
+                throw new Error("'file' (string) is required when listType is 'import'.");
+            }
+            params.file = args.file;
+        }
+        const result = await sendCommandToPursIde({ command: "list", params });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
 };
 
@@ -1133,7 +1341,11 @@ async function handleMcpRequest(request) {
         }
         
         if (method === 'tools/list') {
-            return createSuccessResponse(id, { tools: TOOL_DEFINITIONS });
+            const toolsToExclude = ['query_purescript_ast', 'query_purs_ide']; // Keep query_purs_ide for now, for direct access if needed
+            const filteredToolDefinitions = TOOL_DEFINITIONS.filter(
+                tool => !toolsToExclude.includes(tool.name)
+            );
+            return createSuccessResponse(id, { tools: filteredToolDefinitions });
         }
         
         if (method === 'tools/call') {

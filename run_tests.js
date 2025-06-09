@@ -335,6 +335,32 @@ myFunction x = result
 main = pure unit
 `;
 
+    const topLevelDeclarationsCode = `
+module Test.TopLevel where
+import Prelude
+import Effect (Effect)
+
+foreign import data MyForeignData :: Type
+
+foreign import myForeignFunction :: Int -> Effect String
+
+data MyData = Constructor1 | Constructor2 Int
+
+type MyTypeAlias = String
+
+class MyClass a where
+  classMethod :: a -> Boolean
+
+instance myClassInt :: MyClass Int where
+  classMethod _ = true
+
+myFunction :: Int -> String
+myFunction _ = "hello"
+
+anotherFunction :: Effect Unit
+anotherFunction = pure unit
+`;
+
     // 1. getModuleName
     let testResult = await callMcpTool('getModuleName', { code: moduleCode });
     assertDeepEqual(testResult, "Test.MyModule", 'getModuleName returns full module name.', 'AST - getModuleName');
@@ -342,6 +368,30 @@ main = pure unit
     // 2. getImports
     testResult = await callMcpTool('getImports', { code: moduleCode });
     assertDeepEqual(testResult, [{ module: "Prelude", fullPath: "Prelude" }], 'getImports finds Prelude.', 'AST - getImports');
+
+    // Test getTopLevelDeclarationNames
+    testResult = await callMcpTool('getTopLevelDeclarationNames', { code: topLevelDeclarationsCode });
+    const expectedTopLevelNames = [
+        "MyForeignData",       // from: foreign import data MyForeignData :: Type (kind_value_declaration)
+        "myForeignFunction",   // from: foreign import myForeignFunction :: Int -> Effect String
+        "MyData",              // from: data MyData = ...
+        "MyTypeAlias",         // from: type MyTypeAlias = String
+        "MyClass",             // from: class MyClass a where ...
+        "classMethod",         // from: classMethod :: a -> Boolean (signature within class)
+        "myClassInt",          // from: instance myClassInt :: MyClass Int where ...
+        "myFunction",          // from: myFunction :: Int -> String
+        "anotherFunction"      // from: anotherFunction :: Effect Unit
+    ].sort();
+    // Ensure the result contains all expected names and no extras, order-independent
+    if (testResult && Array.isArray(testResult)) {
+        assert(testResult.sort().join(',') === expectedTopLevelNames.join(','), 
+               `getTopLevelDeclarationNames returns correct names. Expected: ${expectedTopLevelNames.join(', ')}, Got: ${testResult.sort().join(', ')}`, 
+               'AST - getTopLevelDeclarationNames');
+    } else {
+        assert(false, 
+               `getTopLevelDeclarationNames failed or returned unexpected type. Expected array, Got: ${JSON.stringify(testResult)}`, 
+               'AST - getTopLevelDeclarationNames');
+    }
     
     // 3. getFunctionNames
     testResult = await callMcpTool('getFunctionNames', { code: functionsCode });

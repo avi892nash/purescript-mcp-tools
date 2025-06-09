@@ -59,6 +59,7 @@ graph LR
         - Advanced analysis: `generate_dependency_graph`
         - Granular AST querying (Phase 1): `getModuleName`, `getImports`, `getFunctionNames`, `getTypeSignatures`, `getLetBindings`, `getDataTypes`, `getTypeClasses`, `getInstances`, `getTypeAliases`, `getStringLiterals`, `getIntegerLiterals`, `getVariableReferences`, `getRecordFields`, `getCasePatterns`, `getDoBindings`, `getWhereBindings`.
         - (Deprecated: `query_purescript_ast`)
+        - Direct `purs ide` command wrappers (focused on context gathering): `pursIdeLoad`, `pursIdeType`, `pursIdeRebuild`, `pursIdeUsages`, `pursIdeList`, `pursIdeCwd`, `pursIdeReset`, `pursIdeQuit`.
     - Manages the `purs ide server` child process.
     - Uses `web-tree-sitter` for the AST query tools.
 - **`purs ide server` (Child Process):**
