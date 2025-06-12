@@ -211,14 +211,20 @@ async function internalHandleStartPursIdeServer(args) {
         pursIdeProcess = null; 
         pursIdeIsReady = false;
     }
+
+    if (!args.project_path || typeof args.project_path !== 'string') {
+        throw new Error("Invalid input: 'project_path' (string) is required for start_purs_ide_server.");
+    }
     pursIdeServerPort = args.port || 4242;
-    pursIdeProjectPath = path.resolve(args.project_path || process.cwd());
+    pursIdeProjectPath = path.resolve(args.project_path); // Removed default process.cwd()
     const outputDir = args.output_directory || "output/";
     const sourceGlobs = args.source_globs || ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"];
     const logLevel = args.log_level || "none";
     pursIdeLogBuffer = [];
+    // Reverted to pass sourceGlobs directly as arguments
     const cmdArgs = ['ide', 'server', '--port', pursIdeServerPort.toString(), '--output-directory', outputDir, '--log-level', logLevel, ...sourceGlobs];
-    logToStderr(`Spawning 'npx purs ${cmdArgs.join(' ')}' in CWD: ${pursIdeProjectPath}`, "info");
+    const fullCommand = `npx purs ${cmdArgs.join(' ')}`;
+    logToStderr(`Spawning '${fullCommand}' in CWD: ${pursIdeProjectPath}`, "info");
     
     return new Promise((resolve, reject) => {
         pursIdeProcess = spawn('npx', ['purs', ...cmdArgs], { cwd: pursIdeProjectPath, shell: true });
@@ -245,6 +251,7 @@ async function internalHandleStartPursIdeServer(args) {
                 logToStderr("Initial 'load' command to purs ide server successful.", "info");
                 const result = {
                     status_message: "purs ide server started and initial load attempted.",
+                    command_executed: fullCommand,
                     port: pursIdeServerPort,
                     project_path: pursIdeProjectPath,
                     initial_load_result: loadResult,
@@ -667,15 +674,16 @@ const TOOL_DEFINITIONS = [
     {
         name: "start_purs_ide_server",
         description: "Starts a purs ide server process. Manages one server instance at a time.",
-        inputSchema: { 
-            type: "object", 
-            properties: { 
-                project_path: { type: "string" }, 
-                port: { type: "integer", default: 4242 }, 
-                output_directory: { type: "string", default: "output/" }, 
-                source_globs: { type: "array", items: { type: "string" }, default: ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"]}, 
+        inputSchema: {
+            type: "object",
+            properties: {
+                project_path: { type: "string", description: "Absolute or relative path to the PureScript project directory." },
+                port: { type: "integer", default: 4242 },
+                output_directory: { type: "string", default: "output/" },
+                source_globs: { type: "array", items: { type: "string" }, default: ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"]},
                 log_level: { type: "string", enum: ["all", "debug", "perf", "none"], default: "none" }
             },
+            required: ["project_path"],
             additionalProperties: false
         },
     },
