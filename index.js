@@ -243,7 +243,7 @@ async function internalHandleStartPursIdeServer(args) {
     logToStderr(`Spawning '${fullCommand}' in CWD: ${pursIdeProjectPath}`, "info");
     
     return new Promise((resolve, reject) => {
-        pursIdeProcess = spawn('npx', ['purs', ...cmdArgs], { cwd: pursIdeProjectPath, shell: true });
+        pursIdeProcess = spawn('npx', ['purs', ...cmdArgs], { cwd: pursIdeProjectPath, shell: false, env: process.env });
         pursIdeIsReady = false;
         pursIdeProcess.stdout.on('data', (data) => logPursIdeOutput(data, 'stdout'));
         pursIdeProcess.stderr.on('data', (data) => logPursIdeOutput(data, 'stderr'));
