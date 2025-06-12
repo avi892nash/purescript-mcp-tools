@@ -6,6 +6,9 @@ const chalk = require('chalk');
 const fs = require('fs').promises;
 const readline = require('readline');
 
+// --- Log File ---
+const LOG_FILE_PATH = path.join(__dirname, 'purescript-mcp-server.log');
+
 // --- Tree-sitter PureScript Parser State ---
 let PureScriptLanguage;
 let purescriptTsParser;
@@ -44,14 +47,24 @@ const SERVER_CAPABILITIES = {
 function logToStderr(message, level = 'info') {
     const timestamp = new Date().toISOString();
     let coloredMessage = message;
+    const plainMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+
     switch (level) {
-        case 'error': coloredMessage = chalk.redBright(`[${timestamp}] [ERROR] ${message}`); break;
-        case 'warn': coloredMessage = chalk.yellowBright(`[${timestamp}] [WARN] ${message}`); break;
-        case 'info': coloredMessage = chalk.blueBright(`[${timestamp}] [INFO] ${message}`); break;
-        case 'debug': coloredMessage = chalk.gray(`[${timestamp}] [DEBUG] ${message}`); break;
-        default: coloredMessage = `[${timestamp}] ${message}`;
+        case 'error': coloredMessage = chalk.redBright(plainMessage); break;
+        case 'warn': coloredMessage = chalk.yellowBright(plainMessage); break;
+        case 'info': coloredMessage = chalk.blueBright(plainMessage); break;
+        case 'debug': coloredMessage = chalk.gray(plainMessage); break;
+        default: coloredMessage = plainMessage; // Use plain message if level is unknown for stderr
     }
     process.stderr.write(coloredMessage + '\n');
+
+    // Append to log file
+    fs.appendFile(LOG_FILE_PATH, plainMessage + '\n')
+        .catch(err => {
+            // If file logging fails, log an error to stderr itself.
+            const fileLogError = `[${new Date().toISOString()}] [ERROR] Failed to write to log file ${LOG_FILE_PATH}: ${err.message}`;
+            process.stderr.write(chalk.redBright(fileLogError) + '\n');
+        });
 }
 
 function logPursIdeOutput(data, type = 'stdout') {
