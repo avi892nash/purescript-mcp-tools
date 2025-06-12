@@ -23,7 +23,8 @@
     - The remote repository is `ssh://git@ssh.bitbucket.juspay.net/~avinash.verma_juspay.in/purescript-tools-mcp.git`.
 
 ## Documentation Strategy
-- **`INSTALL.md`:** Provides general installation instructions for any user/developer wanting to set up the server from scratch (includes cloning). This is the single source of truth for installation.
+- **`README.md`:** Provides comprehensive project information, installation, configuration, and usage instructions. This is the primary source of truth for users and developers.
+- **`INSTALL.md`:** This file has been removed. All installation instructions are in `README.md`.
 - **Memory Bank:** Core project context, decisions, and progress are tracked in the `memory-bank/` directory.
 
 ## Tool Usage Patterns
@@ -34,18 +35,18 @@
     - Recent fixes (March 2025) addressed issues in `getModuleName`, `getDataTypes`, `getTypeClasses`, and `getInstances`. `getTypeSignatures` was refactored and needs re-testing.
 
 ## Important Reminders for Cline
-- **Memory Reset:** My memory is reset between sessions. The Memory Bank (especially `activeContext.md` and `progress.md`) and `INSTALL.md` are CRUCIAL for re-orienting myself.
+- **Memory Reset:** My memory is reset between sessions. The Memory Bank (especially `activeContext.md` and `progress.md`) and `README.md` are CRUCIAL for re-orienting myself.
 - **File Paths:** All paths are relative to the project root (`/Users/avinash.verma/Juspay/what-is-purs`).
 - **User Confirmation:** Wait for user confirmation after each tool use.
 - **`mcp-config.json` Structure:** This file defines how I discover and use the server's tools.
 - **PureScript Tooling:** `purs ide` interaction and the new AST query tools are core features.
 - **Installation Prompts:**
-    - For any user/developer (including a new AI instance or myself if setting up from scratch): The prompt must include the `git clone` command and direct them to `INSTALL.md`.
+    - For any user/developer (including a new AI instance or myself if setting up from scratch): The prompt must include the `git clone` command and direct them to `README.md`.
 - **Testing:** `run_tests.js` has been updated to use JSON-RPC 2.0 and includes comprehensive tests for the new AST query tools (Phase 1).
 
 ## Evolution of Project Decisions
 - Established `main` as the primary Git branch.
-- Consolidated installation instructions into a single `INSTALL.md` file.
+- Consolidated installation instructions into `README.md` (formerly `INSTALL.md`).
 - Successfully configured and pushed to the Bitbucket remote.
 - Shifted from HTTP server to stdio-based JSON-RPC 2.0 MCP server.
 - Replaced generic `query_purescript_ast` tool with a suite of specific, granular AST query tools (Phase 1 implemented).

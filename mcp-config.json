@@ -1,15 +1,11 @@
 {
   "servers": [
     {
-      "name": "purescript-mcp-stdio-server",
-      "description": "A local MCP server for PureScript related tasks, communicating via stdio.",
+      "name": "purescript-tools-mcp",
+      "description": "Provides tools for PureScript development tasks via stdio MCP.",
       "type": "executable",
       "command": "node index.js",
       "tools": [
-        {
-          "name": "get_manifest",
-          "description": "Returns the server's tool manifest."
-        },
         {
             "name": "get_server_status",
             "description": "Returns the current status of the server and its components."
@@ -19,12 +15,76 @@
           "description": "Echoes back the input string."
         },
         {
-          "name": "query_purescript_ast",
-          "description": "Parses PureScript code and executes a Tree-sitter query against its AST."
+            "name": "getModuleName",
+            "description": "Extracts the module name from a PureScript file or code string."
+        },
+        {
+            "name": "getImports",
+            "description": "Retrieves all import statements with module and submodule information."
+        },
+        {
+            "name": "getTopLevelDeclarationNames",
+            "description": "Extracts the names of all top-level declarations (functions, data types, type classes, etc.) from a PureScript file or code string."
+        },
+        {
+            "name": "getFunctionNames",
+            "description": "Gets all function names defined in the code snippet."
+        },
+        {
+            "name": "getTypeSignatures",
+            "description": "Extracts function type signatures from a code snippet."
+        },
+        {
+            "name": "getLetBindings",
+            "description": "Finds variables bound in let expressions from a code snippet."
+        },
+        {
+            "name": "getDataTypes",
+            "description": "Extracts data type declarations from a code snippet."
+        },
+        {
+            "name": "getTypeClasses",
+            "description": "Gets type class declarations from a code snippet."
+        },
+        {
+            "name": "getInstances",
+            "description": "Finds type class instances from a code snippet."
+        },
+        {
+            "name": "getTypeAliases",
+            "description": "Extracts type alias declarations from a code snippet."
+        },
+        {
+            "name": "getStringLiterals",
+            "description": "Finds all string literals in a code snippet."
+        },
+        {
+            "name": "getIntegerLiterals",
+            "description": "Extracts all integer literals from a code snippet."
+        },
+        {
+            "name": "getVariableReferences",
+            "description": "Gets all variable names used in expressions in a code snippet."
+        },
+        {
+            "name": "getRecordFields",
+            "description": "Extracts record field information from a code snippet."
+        },
+        {
+            "name": "getCasePatterns",
+            "description": "Analyzes case expression patterns from a code snippet."
+        },
+        {
+            "name": "getDoBindings",
+            "description": "Finds variable bindings in do blocks from a code snippet."
+        },
+        {
+            "name": "getWhereBindings",
+            "description": "Extracts function names from where clauses in a code snippet."
         },
         {
           "name": "start_purs_ide_server",
-          "description": "Starts a purs ide server process for a given PureScript project. This server is then used by 'query_purs_ide' and 'generate_dependency_graph'. Manages one server instance at a time."
+          "description": "Starts a purs ide server process. Manages one server instance at a time."
         },
         {
           "name": "stop_purs_ide_server",
@@ -32,11 +92,43 @@
         },
         {
           "name": "query_purs_ide",
-          "description": "Sends a command to the currently running purs ide server (must be started first using 'start_purs_ide_server')."
+          "description": "Sends a command to the currently running purs ide server."
         },
         {
           "name": "generate_dependency_graph",
-          "description": "Generates a dependency graph for specified PureScript modules using purs ide and Tree-sitter. Graph generation can be slow for a large number of modules (e.g., >100); consider processing in batches if needed."
+          "description": "Generates a dependency graph for specified PureScript modules."
+        },
+        {
+            "name": "pursIdeLoad",
+            "description": "Loads modules into the purs ide server. Typically the first command after server start."
+        },
+        {
+            "name": "pursIdeType",
+            "description": "Looks up the type of a given identifier using purs ide server."
+        },
+        {
+            "name": "pursIdeCwd",
+            "description": "Gets the current working directory of the purs ide server."
+        },
+        {
+            "name": "pursIdeReset",
+            "description": "Clears loaded modules in the purs ide server."
+        },
+        {
+            "name": "pursIdeQuit",
+            "description": "Requests the purs ide server to quit and stops the managed process."
+        },
+        {
+            "name": "pursIdeRebuild",
+            "description": "Provides a fast rebuild for a single module using purs ide server."
+        },
+        {
+            "name": "pursIdeUsages",
+            "description": "Finds all usages of a uniquely identified declaration using purs ide server."
+        },
+        {
+            "name": "pursIdeList",
+            "description": "Lists available modules or imports for a file using purs ide server."
         }
       ]
     }

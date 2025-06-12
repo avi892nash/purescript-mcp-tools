@@ -4,6 +4,10 @@
 Refining the set of `purs ide` command wrappers in `index.js` to focus on tools that primarily aid an AI in gathering context and understanding a PureScript codebase, rather than direct code generation assistance.
 
 ## 2. Recent Changes
+- **Documentation Update:**
+    - `INSTALL.md`: File removed.
+    - `README.md`: Created with comprehensive project information, installation, configuration, and usage instructions.
+    - `mcp-config.json`: Updated to reflect the current toolset in `index.js`.
 - **Refined `purs ide` Command Wrappers in `index.js`:**
     - Removed tools primarily for code generation: `pursIdeImport`, `pursIdeCaseSplit`, `pursIdeAddClause`.
     - Removed `pursIdeComplete` as per user feedback.
@@ -39,4 +43,4 @@ Refining the set of `purs ide` command wrappers in `index.js` to focus on tools 
 - **Input Schemas:** The new `pursIde*` tools have specific input schemas mirroring the `purs ide` command parameters for clarity and ease of use.
 - **Error Handling:** Basic error handling (e.g., server not running) is in place. More specific error propagation from `purs ide` responses should be ensured.
 - **Testing:** Crucial to test each new wrapper, especially `pursIdeImport` due to its subcommand structure.
-- **Documentation:** `INSTALL.md` and `.clinerules` should be reviewed and updated if necessary to reflect the new tools and potentially guide their usage.
+- **Documentation:** `README.md` is now the primary source for installation and usage. `.clinerules` should be reviewed and updated if necessary. `INSTALL.md` has been removed.

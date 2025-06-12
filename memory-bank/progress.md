@@ -15,7 +15,7 @@
 - **MCP Configuration (`mcp-config.json`):**
     - Configured for `type: "executable"` with `command: "node index.js"`.
 - **Memory Bank Core:**
-    - All core Memory Bank files (`projectbrief.md`, `productContext.md`, `techContext.md`, `systemPatterns.md`, `activeContext.md`, `progress.md`) are up-to-date with the latest changes.
+    - All core Memory Bank files (`projectbrief.md`, `productContext.md`, `techContext.md`, `systemPatterns.md`, `activeContext.md`, `progress.md`) are being updated to reflect documentation changes.
 - **Node.js Project Setup:**
     - `package.json` defines dependencies. `express` and `node-fetch` are still listed but likely unused.
     - `web-tree-sitter`, `chalk`, `fs.promises`, `readline` are actively used.
@@ -26,9 +26,11 @@
     - Includes comprehensive tests for all Phase 1 AST query tools.
     - **Needs to be updated to include tests for the new `pursIde*` wrapper tools.**
 - **Documentation:**
-    - `INSTALL.md` updated for JSON-RPC 2.0 and AST tools.
+    - `README.md`: Created as the new primary documentation file.
+    - `INSTALL.md`: File removed.
+    - `mcp-config.json`: Updated to match current tools in `index.js`.
     - `.clinerules` updated.
-    - `systemPatterns.md` and `activeContext.md` updated to reflect new `pursIde*` tools.
+    - `systemPatterns.md` and `activeContext.md` updated to reflect new `pursIde*` tools and documentation changes.
 
 ## 2. What's Left to Build (Immediate Tasks)
 - **Test New `pursIde*` Wrappers:** Update `run_tests.js` to include tests for all the newly added `pursIdeLoad`, `pursIdeComplete`, etc., tools. Execute tests to verify their functionality.
@@ -42,7 +44,7 @@
 
 ## 3. Current Status
 - The `index.js` script now includes a comprehensive set of MCP tools that wrap common `purs ide` server commands, in addition to the existing AST query tools.
-- Core Memory Bank documents (`systemPatterns.md`, `activeContext.md`) have been updated to reflect these additions. `progress.md` is being updated now.
+- Core Memory Bank documents (`systemPatterns.md`, `activeContext.md`, `progress.md`) have been updated to reflect documentation changes (`README.md` creation, `INSTALL.md` removal, `mcp-config.json` update).
 - **The new `pursIde*` tools are pending testing.**
 - The `tools/call` response format for all tools is ` { content: [{ type: "text", text: JSON.stringify(tool_specific_result, null, 2) }] }`.
 
