@@ -167,17 +167,20 @@ function sendCommandToPursIde(commandPayload) {
 // Updated to return MCP standard response format { content: [{type: "text", text: ...}] }
 
 async function internalHandleGetServerStatus() {
-    const status = {
+    const statusResponse = {
+        status: 'running', // Overall server status
+        purescript_tools_mcp_version: SERVER_INFO.version,
         treeSitterInitialized,
-        pursIdeServer: {
-            running: !!pursIdeProcess,
+        purs_ide_server_status: { // Renamed for clarity and to match test assertion expectation
+            status: pursIdeProcess ? (pursIdeIsReady ? 'ready' : 'starting') : (pursIdeServerPort ? 'stopped' : 'not_started'),
+            running: !!pursIdeProcess, // Keep this for direct boolean check if needed
             ready: pursIdeIsReady,
             port: pursIdeServerPort,
             projectPath: pursIdeProjectPath,
             recentLogs: pursIdeLogBuffer.slice(-10)
         }
     };
-    return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }] };
+    return { content: [{ type: "text", text: JSON.stringify(statusResponse, null, 2) }] };
 }
 
 async function internalHandleEcho(args) {
@@ -1258,26 +1261,49 @@ const INTERNAL_TOOL_HANDLERS = {
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
     "pursIdeQuit": async () => {
-        let quitMessage = "purs ide server quit command sent.";
-        try {
-            const result = await sendCommandToPursIde({ command: "quit" });
-            quitMessage += ` Response: ${JSON.stringify(result)}`;
-        } catch (error) {
-            quitMessage += ` Error sending quit command: ${error.message}`;
-            logToStderr(quitMessage, "warn");
-            // Still attempt to stop the process
+        let quitMessage = "purs ide server quit command initiated.";
+        let pursIdeResponded = false;
+
+        if (pursIdeProcess && pursIdeIsReady) {
+            logToStderr("[pursIdeQuit] Attempting to send 'quit' command to purs ide server.", "debug");
+            sendCommandToPursIde({ command: "quit" })
+                .then(res => {
+                    pursIdeResponded = true;
+                    logToStderr(`[pursIdeQuit] purs ide server responded to quit command: ${JSON.stringify(res)}`, 'debug');
+                })
+                .catch(err => {
+                    logToStderr(`[pursIdeQuit] Error/No response from purs ide server for quit command: ${err.message}`, 'warn');
+                });
+            
+            // Wait a short period to allow purs ide server to shut down gracefully
+            // or for the sendCommandToPursIde to potentially resolve/reject.
+            await delay(250); // Increased slightly to 250ms
+        } else {
+            quitMessage = "No purs ide server was running or ready to send quit command to.";
+            logToStderr("[pursIdeQuit] " + quitMessage, "info");
         }
-        // Ensure our managed process is also stopped
+
+        // Ensure our managed process is stopped regardless of purs ide's response
         if (pursIdeProcess) {
+            logToStderr("[pursIdeQuit] Ensuring managed purs ide process is stopped.", "debug");
             pursIdeProcess.kill();
             pursIdeProcess = null;
             pursIdeIsReady = false;
-            logPursIdeOutput("purs ide server process stopped by pursIdeQuit tool.", "info");
-            quitMessage += " Managed purs ide process also stopped.";
+            logPursIdeOutput("Managed purs ide server process stopped via pursIdeQuit tool.", "info");
+            quitMessage += " Managed purs ide process has been stopped.";
         } else {
-            quitMessage += " No managed purs ide process was running to stop.";
+            if (!quitMessage.includes("No purs ide server was running")) {
+                 quitMessage += " No managed purs ide process was found running to stop.";
+            }
         }
-        return { content: [{ type: "text", text: JSON.stringify({ status_message: quitMessage }, null, 2) }] };
+        
+        if (pursIdeResponded) {
+            quitMessage += " purs ide server acknowledged quit.";
+        } else {
+            quitMessage += " purs ide server may not have acknowledged quit before process termination.";
+        }
+
+        return { content: [{ type: "text", text: JSON.stringify({ status_message: quitMessage, resultType: "success" }, null, 2) }] };
     },
     "pursIdeRebuild": async (args) => {
         if (!args || typeof args.file !== 'string') {

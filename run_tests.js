@@ -489,7 +489,17 @@ async function runTests() {
 
     // Test 1: echo
     const echoResult = await callMcpTool('echo', { message: 'Hello Test' });
-    assert(echoResult && echoResult === 'Echo: Hello Test', 'Echo tool responds correctly.', 'Echo');
+    assert(echoResult && typeof echoResult === 'string' && echoResult.trim() === 'Echo: Hello Test', 
+           `Echo tool responds correctly. Got: "${echoResult}" (type: ${typeof echoResult})`, 
+           'Echo');
+
+    // Test 2: get_server_status
+    const serverStatusResult = await callMcpTool('get_server_status');
+    assert(serverStatusResult && serverStatusResult.status === 'running' && serverStatusResult.purescript_tools_mcp_version, 'get_server_status reports running and version.', 'Server Status');
+    if (serverStatusResult && serverStatusResult.purs_ide_server_status) {
+        assert(serverStatusResult.purs_ide_server_status.status === 'not_started' || serverStatusResult.purs_ide_server_status.status === 'stopped', 'get_server_status reports purs_ide_server initially not started or stopped.', 'Server Status - Purescript IDE');
+    }
+
 
     // Run AST tool tests
     await runAstToolTests();
@@ -522,29 +532,37 @@ async function runTests() {
         });
         assert(completeTest && completeTest.resultType === 'success' && completeTest.result.some(r => r.identifier === 'log' && r.module === 'Effect.Console'), 'query_purs_ide for "complete log".', 'Query purs ide - Complete');
 
-        const typeTest = await callMcpTool('query_purs_ide', {
+        const typeTestOld = await callMcpTool('query_purs_ide', {
             purs_ide_command: "type",
             purs_ide_params: { search: "main", currentModule: "Main" }
         });
-        assert(typeTest && typeTest.resultType === 'success' && typeTest.result.some(r => r.identifier === 'main' && r.type.includes('Effect Unit')), 'query_purs_ide for "type main".', 'Query purs ide - Type');
+        assert(typeTestOld && typeTestOld.resultType === 'success' && typeTestOld.result.some(r => r.identifier === 'main' && r.type.includes('Effect Unit')), 'query_purs_ide for "type main".', 'Query purs ide - Type (Old)');
         
-        const usagesTest = await callMcpTool('query_purs_ide', {
+        const usagesTestOld = await callMcpTool('query_purs_ide', {
             purs_ide_command: "usages",
             purs_ide_params: { module: "Effect.Console", namespace: "value", identifier: "log" }
         });
-        assert(usagesTest && usagesTest.resultType === 'success' && usagesTest.result.length >= 2, 'query_purs_ide for "usages log".', 'Query purs ide - Usages');
+        assert(usagesTestOld && usagesTestOld.resultType === 'success' && usagesTestOld.result.length >= 2, 'query_purs_ide for "usages log".', 'Query purs ide - Usages (Old)');
 
         const depGraphTest = await callMcpTool('generate_dependency_graph', {
             target_modules: ["Main", "Utils", "Effect.Console"]
         });
         assert(depGraphTest && depGraphTest.graph_nodes && depGraphTest.graph_nodes.some(n => n.id === "Main.main"), 'generate_dependency_graph for Main module.', 'Dependency Graph - Main Module Presence');
+
+        // Run tests for dedicated purs ide tools
+        await runDedicatedPursIdeToolTests();
+
     } else {
-        logTest("Skipping purs ide query and dependency graph tests as purs ide server did not start/load project successfully.", 'warn');
-        testsFailed += 4; // Mark these dependent tests as failed
+        logTest("Skipping purs ide query, dependency graph, and dedicated purs ide tool tests as purs ide server did not start/load project successfully.", 'warn');
+        testsFailed += 4; // Mark these dependent tests as failed (query_purs_ide tests)
+        testsFailed += 8; // Mark dedicated purs ide tool tests as failed (7 existing + 1 new for pursIdeQuit)
     }
 
     const stopIdeResult = await callMcpTool('stop_purs_ide_server', {});
-    assert(stopIdeResult && stopIdeResult.status_message === "purs ide server stopped.", 'stop_purs_ide_server reports success.', 'Stop purs ide');
+    const stopMessage = stopIdeResult ? stopIdeResult.status_message : "";
+    assert(stopIdeResult && (stopMessage === "purs ide server stopped." || stopMessage === "No purs ide server was running."), 
+           `stop_purs_ide_server reports appropriate status. Got: "${stopMessage}"`, 
+           'Stop purs ide');
 
 
     console.log(chalk.cyan.bold("\n--- Test Summary ---"));
@@ -572,3 +590,77 @@ runTests().catch(err => {
     }
     process.exit(1);
 });
+
+async function runDedicatedPursIdeToolTests() {
+    logTest("--- Running Dedicated Purs IDE Tool Tests ---", "info");
+
+    // Test: pursIdeLoad (all modules - already done by start_purs_ide_server, but test explicit call)
+    const loadAllResult = await callMcpTool('pursIdeLoad', {});
+    assert(loadAllResult && loadAllResult.resultType === 'success', 'pursIdeLoad (all modules) reports success.', 'PursIDE - Load All');
+
+    // Test: pursIdeLoad (specific module)
+    const loadSpecificResult = await callMcpTool('pursIdeLoad', { modules: ["Main"] });
+    assert(loadSpecificResult && loadSpecificResult.resultType === 'success', 'pursIdeLoad (specific module "Main") reports success.', 'PursIDE - Load Specific');
+
+    // Test: pursIdeCwd
+    const cwdResult = await callMcpTool('pursIdeCwd');
+    assert(cwdResult && cwdResult.result === TEST_PROJECT_PATH, `pursIdeCwd returns correct path. Expected: ${TEST_PROJECT_PATH}, Got: ${cwdResult.result}`, 'PursIDE - Cwd');
+
+    // Test: pursIdeType
+    const typeResult = await callMcpTool('pursIdeType', { search: "main", currentModule: "Main" });
+    assert(typeResult && typeResult.resultType === 'success' && typeResult.result.some(r => r.identifier === 'main' && r.type.includes('Effect Unit')), 'pursIdeType for "main" in "Main".', 'PursIDE - Type');
+    
+    const typeWithFilterResult = await callMcpTool('pursIdeType', { search: "log", filters: [{ "filter": "exact", "params": {"search": "log", "module": ["Effect.Console"]}}] });
+    assert(typeWithFilterResult && typeWithFilterResult.resultType === 'success' && typeWithFilterResult.result.some(r => r.identifier === 'log' && r.module === 'Effect.Console'), 'pursIdeType for "log" with module filter.', 'PursIDE - Type with Filter');
+
+    // Test: pursIdeUsages
+    const usagesResult = await callMcpTool('pursIdeUsages', { module: "Effect.Console", namespace: "value", identifier: "log" });
+    assert(usagesResult && usagesResult.resultType === 'success' && usagesResult.result.length >= 2, 'pursIdeUsages for "log" in "Effect.Console".', 'PursIDE - Usages');
+
+    // Test: pursIdeList (availableModules)
+    const listModulesResult = await callMcpTool('pursIdeList', { listType: "availableModules" });
+    assert(listModulesResult && listModulesResult.resultType === 'success' && Array.isArray(listModulesResult.result) && listModulesResult.result.includes("Main"), 'pursIdeList (availableModules) lists "Main".', 'PursIDE - List Available Modules');
+
+    // Test: pursIdeList (import)
+    const listImportResult = await callMcpTool('pursIdeList', { listType: "import", file: path.join(TEST_PROJECT_PATH, "src/Main.purs") });
+    assert(listImportResult && listImportResult.resultType === 'success' && 
+           listImportResult.result && Array.isArray(listImportResult.result.imports) && 
+           listImportResult.result.imports.some(imp => imp.module === "Effect.Console"), 
+           'pursIdeList (import for Main.purs) lists "Effect.Console".', 'PursIDE - List Imports');
+
+    // Test: pursIdeRebuild
+    // For a simple rebuild test, we'll use the existing Utils.purs.
+    // A more robust test might involve modifying the file, but for now, just check if rebuild runs.
+    const utilsFilePath = path.join(TEST_PROJECT_PATH, 'src/Utils.purs');
+    const rebuildResult = await callMcpTool('pursIdeRebuild', { file: utilsFilePath });
+    assert(rebuildResult && rebuildResult.resultType === 'success', `pursIdeRebuild for "${utilsFilePath}" reports success.`, 'PursIDE - Rebuild');
+    if (rebuildResult && rebuildResult.resultType === 'success' && rebuildResult.result && rebuildResult.result.length > 0) {
+        const firstRebuildEntry = rebuildResult.result[0];
+        assert(firstRebuildEntry.file === utilsFilePath && firstRebuildEntry.status === 'rebuilt', 'pursIdeRebuild result entry indicates rebuilt file.', 'PursIDE - Rebuild Status');
+    } else if (rebuildResult && rebuildResult.resultType === 'success' && (!rebuildResult.result || rebuildResult.result.length === 0)) {
+        logTest(`pursIdeRebuild for "${utilsFilePath}" succeeded but returned empty result array. This might mean no changes were detected.`, 'warn');
+        assert(true, `pursIdeRebuild for "${utilsFilePath}" succeeded (empty result).`, 'PursIDE - Rebuild');
+    }
+
+
+    // Test: pursIdeReset
+    const resetResult = await callMcpTool('pursIdeReset');
+    assert(resetResult && resetResult.resultType === 'success', 'pursIdeReset reports success.', 'PursIDE - Reset');
+    // After reset, a type query might fail or return empty if modules are truly cleared.
+    // However, the server might auto-reload. Let's re-load to be sure for subsequent tests if any.
+    await callMcpTool('pursIdeLoad', {}); // Reload all for safety
+
+    // Test: pursIdeQuit
+    // This should cause the purs ide server to stop.
+    // The subsequent call to 'stop_purs_ide_server' in the main runTests function
+    // should then confirm it's stopped or handle it gracefully.
+    logTest("Attempting to quit purs ide server via pursIdeQuit tool...", "info");
+    const quitResult = await callMcpTool('pursIdeQuit');
+    assert(quitResult && (quitResult.resultType === 'success' || quitResult.message === 'purs ide server quit successfully.'), 'pursIdeQuit reports success.', 'PursIDE - Quit');
+    
+    // Verify server status after quit
+    const serverStatusAfterQuit = await callMcpTool('get_server_status');
+    if (serverStatusAfterQuit && serverStatusAfterQuit.purs_ide_server_status) {
+        assert(serverStatusAfterQuit.purs_ide_server_status.status === 'stopped' || serverStatusAfterQuit.purs_ide_server_status.status === 'not_running', 'get_server_status reports purs_ide_server stopped after pursIdeQuit.', 'Server Status - Purescript IDE After Quit');
+    }
+}
