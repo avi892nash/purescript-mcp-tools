@@ -107,10 +107,20 @@ async function getCodeFromInput(args, isModuleOriented = true) {
             throw new Error("Invalid input: Exactly one of 'filePath' or 'code' must be provided for module-oriented tools.");
         }
         if (hasFilePath) {
+            let resolvedPath = args.filePath;
             try {
-                return await fs.readFile(args.filePath, 'utf-8');
+                if (!path.isAbsolute(resolvedPath)) {
+                    if (pursIdeProjectPath) {
+                        resolvedPath = path.resolve(pursIdeProjectPath, args.filePath);
+                        logToStderr(`[getCodeFromInput] Resolved relative filePath "${args.filePath}" to "${resolvedPath}" using pursIdeProjectPath.`, 'debug');
+                    } else {
+                        resolvedPath = path.resolve(process.cwd(), args.filePath);
+                        logToStderr(`[getCodeFromInput] Warning: pursIdeProjectPath not set. Resolved relative filePath "${args.filePath}" to "${resolvedPath}" using process.cwd(). Consider starting purs-ide-server to set project context.`, 'warn');
+                    }
+                }
+                return await fs.readFile(resolvedPath, 'utf-8');
             } catch (e) {
-                throw new Error(`Failed to read file at ${args.filePath}: ${e.message}`);
+                throw new Error(`Failed to read file at ${resolvedPath} (original: ${args.filePath}): ${e.message}`);
             }
         }
         return args.code;

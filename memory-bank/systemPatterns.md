@@ -71,6 +71,7 @@ graph LR
         - Direct `purs ide` command wrappers (focused on context gathering): `pursIdeLoad`, `pursIdeType`, `pursIdeRebuild`, `pursIdeUsages`, `pursIdeList`, `pursIdeCwd`, `pursIdeReset`, `pursIdeQuit`.
     - Manages the `purs ide server` child process.
     - Uses `web-tree-sitter` for the AST query tools.
+    - **File Path Resolution:** For tools accepting a `filePath` (like `getModuleName`, `getImports`, `getTopLevelDeclarations`), relative paths are resolved against the `pursIdeProjectPath` (if the `purs ide server` is active and its project path is known), otherwise against the server's current working directory with a warning. Absolute paths are used directly.
 - **`purs ide server` (Child Process):**
     - A standard PureScript tooling server.
     - Communicates with the MCP server over TCP.

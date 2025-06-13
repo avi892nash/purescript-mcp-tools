@@ -4,6 +4,8 @@
 - Code simplification and refinement.
 
 **Recent Changes:**
+- **`filePath` Resolution in `getCodeFromInput` (in `index.js`):**
+    - Modified `getCodeFromInput` to resolve relative `filePath` arguments against `pursIdeProjectPath` (if set), or `process.cwd()` as a fallback. This improves path handling for tools reading files.
 - **`getTopLevelDeclarations` Simplification (in `index.js`):**
     - Refactored the logic for determining declaration names to use a `Map` for capture lookups and a prioritized list of keys, reducing a long `if/else if` chain.
 - **Previous (`getTopLevelDeclarations` Update):**
@@ -23,7 +25,7 @@
     - Added file-based logging.
 
 **Next Steps:**
-- Update `memory-bank/progress.md` and `memory-bank/systemPatterns.md` to reflect the code simplification.
+- Update `memory-bank/systemPatterns.md` to reflect the `filePath` resolution change.
 - Review and update `.clinerules` if necessary.
-- Inform the user about the completed simplification.
-- Strongly suggest running tests to confirm all fixes and the new simplification.
+- Inform the user about the completed `filePath` resolution fix.
+- Strongly suggest running tests to confirm this fix and other recent changes.

@@ -1,6 +1,7 @@
 ## Progress - 2025-06-13
 
 **What Works:**
+- **`filePath` Resolution:** The `getCodeFromInput` helper in `index.js` now correctly resolves relative `filePath` arguments against the active `pursIdeProjectPath` (if set), falling back to `process.cwd()` with a warning if not. This enhances path resolution for tools like `getModuleName`, `getImports`, `getTopLevelDeclarationNames`, and `getTopLevelDeclarations`.
 - The `run_tests.js` test suite has test cases covering the currently exposed tools by the `index.js` MCP server.
 - Communication with the `index.js` server via JSON-RPC for tool invocation is established and tested.
 - AST query tools (remaining ones) and `purs-ide-server` management tools have corresponding automated tests.
