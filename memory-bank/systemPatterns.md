@@ -39,7 +39,7 @@ graph LR
         - **Name extraction logic simplified:** Uses a `Map` for captures and a prioritized key list.
         - The post-processing logic for consolidating signatures has been removed, so it returns raw query results.
         - Queries for `newtype`, `type_role_declaration`, and `operator_declaration` (fixity) have been corrected.
-        - Filtering by name, type, and value is supported.
+        - Filtering by name, type, and value (using regular expressions) is supported.
     - Remaining granular tools like `getModuleName`, `getImports`, `getFunctionNames`, and `getWhereBindings` offer specific, focused queries. The `getWhereBindings` tool has been refined to correctly capture `where` clauses associated with functions.
 - **PureScript IDE Interaction:**
     - The MCP server manages a `purs ide server` as a child process.
