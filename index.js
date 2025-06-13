@@ -519,7 +519,7 @@ const TOOL_DEFINITIONS = [
         inputSchema: {
             type: "object",
             properties: {
-                filePath: { type: "string", description: "Absolute path to the PureScript file." },
+                filePath: { type: "string", description: "Path to the PureScript file. Relative paths resolved (project-relative if IDE server active, else CWD-relative). Absolute paths used as-is." },
                 code: { type: "string", description: "PureScript code string." }
             },
             additionalProperties: false,
@@ -532,7 +532,7 @@ const TOOL_DEFINITIONS = [
         inputSchema: {
             type: "object",
             properties: {
-                filePath: { type: "string", description: "Absolute path to the PureScript file." },
+                filePath: { type: "string", description: "Path to the PureScript file. Relative paths resolved (project-relative if IDE server active, else CWD-relative). Absolute paths used as-is." },
                 code: { type: "string", description: "PureScript code string." }
             },
             additionalProperties: false,
@@ -545,7 +545,7 @@ const TOOL_DEFINITIONS = [
         inputSchema: {
             type: "object",
             properties: {
-                filePath: { type: "string", description: "Absolute path to the PureScript file." },
+                filePath: { type: "string", description: "Path to the PureScript file. Relative paths resolved (project-relative if IDE server active, else CWD-relative). Absolute paths used as-is." },
                 code: { type: "string", description: "PureScript code string." }
             },
             additionalProperties: false,
@@ -581,7 +581,7 @@ const TOOL_DEFINITIONS = [
         inputSchema: {
             type: "object",
             properties: {
-                filePath: { type: "string", description: "Absolute path to the PureScript file." },
+                filePath: { type: "string", description: "Path to the PureScript file. Relative paths resolved (project-relative if IDE server active, else CWD-relative). Absolute paths used as-is." },
                 code: { type: "string", description: "PureScript code string." },
                 filters: {
                     type: "object",
