@@ -31,56 +31,12 @@
             "description": "Gets all function names defined in the code snippet."
         },
         {
-            "name": "getTypeSignatures",
-            "description": "Extracts function type signatures from a code snippet."
-        },
-        {
-            "name": "getLetBindings",
-            "description": "Finds variables bound in let expressions from a code snippet."
-        },
-        {
-            "name": "getDataTypes",
-            "description": "Extracts data type declarations from a code snippet."
-        },
-        {
-            "name": "getTypeClasses",
-            "description": "Gets type class declarations from a code snippet."
-        },
-        {
-            "name": "getInstances",
-            "description": "Finds type class instances from a code snippet."
-        },
-        {
-            "name": "getTypeAliases",
-            "description": "Extracts type alias declarations from a code snippet."
-        },
-        {
-            "name": "getStringLiterals",
-            "description": "Finds all string literals in a code snippet."
-        },
-        {
-            "name": "getIntegerLiterals",
-            "description": "Extracts all integer literals from a code snippet."
-        },
-        {
-            "name": "getVariableReferences",
-            "description": "Gets all variable names used in expressions in a code snippet."
-        },
-        {
-            "name": "getRecordFields",
-            "description": "Extracts record field information from a code snippet."
-        },
-        {
-            "name": "getCasePatterns",
-            "description": "Analyzes case expression patterns from a code snippet."
-        },
-        {
-            "name": "getDoBindings",
-            "description": "Finds variable bindings in do blocks from a code snippet."
-        },
-        {
             "name": "getWhereBindings",
-            "description": "Extracts function names from where clauses in a code snippet."
+            "description": "Extracts entire where blocks as text from a code snippet."
+        },
+        {
+            "name": "getTopLevelDeclarations",
+            "description": "Extracts detailed information (name, type, value) of top-level declarations from a PureScript file or code string, with filtering."
         },
         {
           "name": "start_purs_ide_server",

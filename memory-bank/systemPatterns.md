@@ -34,7 +34,13 @@ graph LR
 ## 2. Key Technical Decisions
 - **Language:** Node.js for the MCP server (JavaScript).
 - **MCP Communication:** Utilizes stdio, adhering to JSON-RPC 2.0 for message structure and standard MCP methods (`initialize`, `tools/list`, `tools/call`).
-- **AST Querying:** Provides a suite of granular tools for direct AST parsing and analysis of PureScript code (e.g., `getModuleName`, `getFunctionNames`, `getStringLiterals`, etc.), replacing a single generic query tool. Uses `web-tree-sitter` (details in Tech Context).
+- **AST Querying:**
+    - Core AST analysis is now primarily handled by the `getTopLevelDeclarations` tool. This tool uses `web-tree-sitter` to parse PureScript code and extracts detailed information (name, mapped type like `DeclValue`, `DeclData`, etc., and full text value) for various top-level declarations.
+        - **Name extraction logic simplified:** Uses a `Map` for captures and a prioritized key list.
+        - The post-processing logic for consolidating signatures has been removed, so it returns raw query results.
+        - Queries for `newtype`, `type_role_declaration`, and `operator_declaration` (fixity) have been corrected.
+        - Filtering by name, type, and value is supported.
+    - Remaining granular tools like `getModuleName`, `getImports`, `getFunctionNames`, and `getWhereBindings` offer specific, focused queries. The `getWhereBindings` tool has been refined to correctly capture `where` clauses associated with functions.
 - **PureScript IDE Interaction:**
     - The MCP server manages a `purs ide server` as a child process.
     - Communication with `purs ide server` is via TCP sockets, sending/receiving JSON.
@@ -57,8 +63,11 @@ graph LR
         - Basic: `echo`
         - PureScript IDE interaction: `query_purs_ide`
         - Advanced analysis: `generate_dependency_graph`
-        - Granular AST querying (Phase 1): `getModuleName`, `getImports`, `getFunctionNames`, `getTypeSignatures`, `getLetBindings`, `getDataTypes`, `getTypeClasses`, `getInstances`, `getTypeAliases`, `getStringLiterals`, `getIntegerLiterals`, `getVariableReferences`, `getRecordFields`, `getCasePatterns`, `getDoBindings`, `getWhereBindings`.
+        - Granular AST querying:
+            - `getModuleName`, `getImports`, `getFunctionNames`, `getWhereBindings` (refined query).
+            - **Comprehensive tool:** `getTopLevelDeclarations` (returns raw query results; name extraction simplified; queries for newtype, role, fixity corrected).
         - (Deprecated: `query_purescript_ast`)
+        - (Removed: `getDoBindings`, `getCasePatterns`, `getRecordFields`, `getVariableReferences`, `getIntegerLiterals`, `getLetBindings`, `getStringLiterals`, `getTypeSignatures`, `getDataTypes`, `getTypeClasses`, `getInstances`, `getTypeAliases`)
         - Direct `purs ide` command wrappers (focused on context gathering): `pursIdeLoad`, `pursIdeType`, `pursIdeRebuild`, `pursIdeUsages`, `pursIdeList`, `pursIdeCwd`, `pursIdeReset`, `pursIdeQuit`.
     - Manages the `purs ide server` child process.
     - Uses `web-tree-sitter` for the AST query tools.

@@ -335,6 +335,34 @@ myFunction x = result
 main = pure unit
 `;
 
+    const getTopLevelDeclarationsTestCode = `
+module Test.Declarations where
+
+import Prelude
+import Effect (Effect)
+
+data MyData = ConstructorA | ConstructorB String
+
+type MyAlias = Int
+
+myFunction :: Int -> Int
+myFunction x = x + 1
+
+anotherFunction :: String -> Effect Unit
+anotherFunction _ = pure unit
+
+class MySimpleClass a where
+  mySimpleMethod :: a -> a
+
+instance mySimpleClassInt :: MySimpleClass Int where
+  mySimpleMethod x = x
+
+foreign import data ForeignDataType :: Type
+foreign import foreignFunc :: Int -> String
+type role MyData representational
+infix 6 type Tuple as /\\
+`;
+
     const topLevelDeclarationsCode = `
 module Test.TopLevel where
 import Prelude
@@ -392,83 +420,68 @@ anotherFunction = pure unit
                `getTopLevelDeclarationNames failed or returned unexpected type. Expected array, Got: ${JSON.stringify(testResult)}`, 
                'AST - getTopLevelDeclarationNames');
     }
+
+    // Test getTopLevelDeclarations (new comprehensive tool)
+    let declsResult = await callMcpTool('getTopLevelDeclarations', { code: getTopLevelDeclarationsTestCode });
+    assert(declsResult && Array.isArray(declsResult), 'getTopLevelDeclarations returns an array.', 'AST - getTopLevelDeclarations - Basic');
+    if (declsResult && Array.isArray(declsResult)) {
+        const expectedDeclCount = 14; // MyData, MyAlias, myFunction sig, myFunction val, anotherFunction sig, anotherFunction val, MySimpleClass, mySimpleMethod sig, mySimpleClassInt inst, ForeignDataType, foreignFunc, MyData role, Tuple infix
+        assert(declsResult.length === expectedDeclCount, `getTopLevelDeclarations finds ${expectedDeclCount} declarations. Found: ${declsResult.length}`, 'AST - getTopLevelDeclarations - Count');
+
+        const myFuncDecl = declsResult.find(d => d.name === 'myFunction' && d.type === 'DeclValue');
+        assert(myFuncDecl && myFuncDecl.value.includes('myFunction x = x + 1'), 'getTopLevelDeclarations finds myFunction (DeclValue).', 'AST - getTopLevelDeclarations - myFunction');
+
+        const myDataDecl = declsResult.find(d => d.name === 'MyData' && d.type === 'DeclData');
+        assert(myDataDecl && myDataDecl.value.includes('data MyData = ConstructorA | ConstructorB String'), 'getTopLevelDeclarations finds MyData (DeclData).', 'AST - getTopLevelDeclarations - MyData');
+        
+        const myAliasDecl = declsResult.find(d => d.name === 'MyAlias' && d.type === 'DeclType'); // type_alias maps to DeclType
+        assert(myAliasDecl && myAliasDecl.value.includes('type MyAlias = Int'), 'getTopLevelDeclarations finds MyAlias (DeclType).', 'AST - getTopLevelDeclarations - MyAlias');
+
+        const myClassDecl = declsResult.find(d => d.name === 'MySimpleClass' && d.type === 'DeclClass');
+        assert(myClassDecl && myClassDecl.value.includes('class MySimpleClass a where'), 'getTopLevelDeclarations finds MySimpleClass (DeclClass).', 'AST - getTopLevelDeclarations - MySimpleClass');
+
+        const myInstanceDecl = declsResult.find(d => d.name.startsWith('MySimpleClass Int') && d.type === 'DeclInstanceChain');
+        assert(myInstanceDecl && myInstanceDecl.value.includes('instance mySimpleClassInt :: MySimpleClass Int where'), 'getTopLevelDeclarations finds MySimpleClass Int instance (DeclInstanceChain).', 'AST - getTopLevelDeclarations - MySimpleClass Instance');
+    
+        const foreignDataDecl = declsResult.find(d => d.name === 'ForeignDataType' && d.type === 'DeclKindSignature'); // foreign import data is a kind signature
+        assert(foreignDataDecl && foreignDataDecl.value.includes('foreign import data ForeignDataType :: Type'), 'getTopLevelDeclarations finds ForeignDataType (DeclKindSignature).', 'AST - getTopLevelDeclarations - ForeignDataType');
+
+        const foreignFuncDecl = declsResult.find(d => d.name === 'foreignFunc' && d.type === 'DeclForeign');
+        assert(foreignFuncDecl && foreignFuncDecl.value.includes('foreign import foreignFunc :: Int -> String'), 'getTopLevelDeclarations finds foreignFunc (DeclForeign).', 'AST - getTopLevelDeclarations - foreignFunc');
+
+        const roleDecl = declsResult.find(d => d.name === 'MyData' && d.type === 'DeclRole');
+        assert(roleDecl && roleDecl.value.includes('type role MyData representational'), 'getTopLevelDeclarations finds MyData role (DeclRole).', 'AST - getTopLevelDeclarations - MyData Role');
+
+        const fixityDecl = declsResult.find(d => d.name === '/\\' && d.type === 'DeclFixity');
+        assert(fixityDecl && fixityDecl.value.includes('infix 6 type Tuple as /\\'), 'getTopLevelDeclarations finds Tuple infix (DeclFixity).', 'AST - getTopLevelDeclarations - Tuple Infix');
+        
+        // Test filtering
+        const filteredDeclsName = await callMcpTool('getTopLevelDeclarations', { code: getTopLevelDeclarationsTestCode, filters: { name: "myFunction" } });
+        assert(filteredDeclsName && filteredDeclsName.length === 2 && filteredDeclsName.every(d => d.name === "myFunction"), 'getTopLevelDeclarations filters by name (expects 2: Sig and Val).', 'AST - getTopLevelDeclarations - Filter Name');
+        const hasSig = filteredDeclsName.some(d => d.type === "DeclSignature");
+        const hasVal = filteredDeclsName.some(d => d.type === "DeclValue");
+        assert(hasSig && hasVal, 'Filtered myFunction results include both DeclSignature and DeclValue.', 'AST - getTopLevelDeclarations - Filter Name Types');
+        
+        const filteredDeclsType = await callMcpTool('getTopLevelDeclarations', { code: getTopLevelDeclarationsTestCode, filters: { type: "DeclData" } });
+        assert(filteredDeclsType && filteredDeclsType.length === 1 && filteredDeclsType[0].type === "DeclData", 'getTopLevelDeclarations filters by type.', 'AST - getTopLevelDeclarations - Filter Type');
+
+        const filteredDeclsValue = await callMcpTool('getTopLevelDeclarations', { code: getTopLevelDeclarationsTestCode, filters: { value: "Effect Unit" } });
+        assert(filteredDeclsValue && filteredDeclsValue.length === 1 && filteredDeclsValue[0].name === "anotherFunction", 'getTopLevelDeclarations filters by value.', 'AST - getTopLevelDeclarations - Filter Value');
+    }
     
     // 3. getFunctionNames
     testResult = await callMcpTool('getFunctionNames', { code: functionsCode });
     assertDeepEqual(testResult, ["myFunction", "anotherFunction", "main"], 'getFunctionNames finds all functions.', 'AST - getFunctionNames');
 
-    // 4. getTypeSignatures
-    testResult = await callMcpTool('getTypeSignatures', { code: typeSigsCode });
-    const expectedSignatures = [
-        "myFunction :: Int -> Int",
-        "anotherFunction :: String -> String",
-        "main :: Effect Unit"
-    ];
-    assertDeepEqual(testResult && testResult.sort(), expectedSignatures.sort(), 'getTypeSignatures finds signatures.', 'AST - getTypeSignatures');
-
-    // 5. getLetBindings
-    testResult = await callMcpTool('getLetBindings', { code: letBindingsCode });
-    // Expected: [ { name: 'y', context: 'let' }, { name: 'z', context: 'let' } ] (order might vary)
-    assert(testResult && testResult.length === 2 && testResult.some(b => b.name === 'y' && b.context === 'let') && testResult.some(b => b.name === 'z' && b.context === 'let'), 'getLetBindings finds let-bound variables.', 'AST - getLetBindings');
-
-    // 6. getDataTypes
-    testResult = await callMcpTool('getDataTypes', { code: dataTypesCode });
-    // Expected: [ { name: 'MyType', constructors: [ 'MyConstructor', 'AnotherConstructor' ] }, { name: 'AnotherType', constructors: [ 'GenericConstructor' ] } ] (order might vary)
-    assert(testResult && testResult.length === 2 && testResult.some(dt => dt.name === 'MyType' && dt.constructors.includes('MyConstructor')) && testResult.some(dt => dt.name === 'AnotherType' && dt.constructors.includes('GenericConstructor')), 'getDataTypes finds data types and constructors.', 'AST - getDataTypes');
-    
-    // 7. getTypeClasses
-    testResult = await callMcpTool('getTypeClasses', { code: typeClassesCode });
-    // Expected: [ { name: 'MyShow', typeParameter: 'a' }, { name: 'MyEq', typeParameter: 'a' } ] (MyOrd constraint not captured by this tool)
-    assert(testResult && testResult.length === 2 && testResult.some(tc => tc.name === 'MyShow' && tc.typeParameter === 'a') && testResult.some(tc => tc.name === 'MyEq' && tc.typeParameter === 'a'), 'getTypeClasses finds type classes.', 'AST - getTypeClasses');
-
-    // 8. getInstances
-    testResult = await callMcpTool('getInstances', { code: instancesCode });
-    // Expected: [ { name: 'myShowInt', className: 'MyShow', type: 'Int' }, { name: undefined, className: 'MyShow', type: 'String' } ]
-    assert(testResult && testResult.length === 2 && testResult.some(i => i.name === 'myShowInt' && i.className === 'MyShow' && i.type === 'Int') && testResult.some(i => i.name === undefined && i.className === 'MyShow' && i.type === 'String'), 'getInstances finds instances.', 'AST - getInstances');
-
-    // 9. getTypeAliases
-    testResult = await callMcpTool('getTypeAliases', { code: typeAliasesCode });
-    const expectedTypeAliasesOutput = [
-        "type MyString = String",
-        "type MyRecord = { foo :: Int, bar :: String }",
-        "type MyMap k v = Map k v",
-        "type MyParameterizedRecord a = { value :: a, label :: String }"
-    ];
-    // The order of results from the tool should match the order in the source code.
-    assertDeepEqual(testResult, expectedTypeAliasesOutput, 'getTypeAliases returns raw text of alias declarations.', 'AST - getTypeAliases');
-
-    // 10. getStringLiterals
-    testResult = await callMcpTool('getStringLiterals', { code: stringLiteralsCode });
-    assertDeepEqual(testResult.sort(), ["hello", "world"].sort(), 'getStringLiterals finds string literals.', 'AST - getStringLiterals');
-
-    // 11. getIntegerLiterals
-    testResult = await callMcpTool('getIntegerLiterals', { code: integerLiteralsCode });
-    assertDeepEqual(testResult.sort(), [123, 456].sort(), 'getIntegerLiterals finds integer literals.', 'AST - getIntegerLiterals');
-
-    // 12. getVariableReferences
-    testResult = await callMcpTool('getVariableReferences', { code: varRefsCode });
-    // Expected: ["foo", "bar", "pure", "unit"] (order may vary, duplicates removed by server)
-    assertDeepEqual(testResult.sort(), ["foo", "bar", "pure", "unit"].sort(), 'getVariableReferences finds variable references.', 'AST - getVariableReferences');
-
-    // 13. getRecordFields
-    testResult = await callMcpTool('getRecordFields', { code: recordFieldsCode });
-    // Expected: [ { name: 'label', context: 'literal' }, { name: 'value', context: 'literal' } ]
-    assert(testResult && testResult.length === 2 && testResult.some(f => f.name === 'label' && f.context === 'literal') && testResult.some(f => f.name === 'value' && f.context === 'literal'), 'getRecordFields finds literal fields.', 'AST - getRecordFields');
-
-    // 14. getCasePatterns
-    testResult = await callMcpTool('getCasePatterns', { code: casePatternsCode });
-    const expectedCasePatterns = ["Con1 i", "Con2 s", "_"];
-    assertDeepEqual(testResult && testResult.sort(), expectedCasePatterns.sort(), 'getCasePatterns returns raw text of case patterns.', 'AST - getCasePatterns');
-
-    // 15. getDoBindings
-    testResult = await callMcpTool('getDoBindings', { code: doBindingsCode });
-    // Expected: [ { variable: 'y', bindingType: 'bind' }, { variable: 'x', bindingType: 'let' }, { variable: 'z', bindingType: 'let' } ] (order may vary)
-    assert(testResult && testResult.length === 3 && testResult.some(b => b.variable === 'y' && b.bindingType === 'bind') && testResult.some(b => b.variable === 'x' && b.bindingType === 'let') && testResult.some(b => b.variable === 'z' && b.bindingType === 'let'), 'getDoBindings finds do bindings.', 'AST - getDoBindings');
-
     // 16. getWhereBindings
     testResult = await callMcpTool('getWhereBindings', { code: whereBindingsCode });
-    const expectedWhereBindings = ["intermediate", "result"];
-    assertDeepEqual(testResult && testResult.sort(), expectedWhereBindings.sort(), 'getWhereBindings returns raw text of where-bound function names.', 'AST - getWhereBindings');
+    const expectedWhereBlock = `where 
+    intermediate = x + 1
+    result = intermediate * 2`;
+    // The tool returns an array of where block texts.
+    assert(Array.isArray(testResult) && testResult.length === 1 && testResult[0].replace(/\s+/g, ' ').trim() === expectedWhereBlock.replace(/\s+/g, ' ').trim(),
+           `getWhereBindings returns the full where block text. Expected: "${expectedWhereBlock.replace(/\s+/g, ' ')}", Got: "${testResult && testResult[0] ? testResult[0].replace(/\s+/g, ' ') : 'undefined'}"`,
+           'AST - getWhereBindings');
 
     // Test deprecated query_purescript_ast
     const mainPursContentForOldTest = `module Main where main = pure unit`;

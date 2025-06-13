@@ -1,23 +1,29 @@
-## Active Context - 2025-06-12
+## Active Context - 2025-06-13 (Final AST Tooling Refinements)
 
 **Current Work Focus:**
-- Implementing file-based logging for the MCP server.
+- Code simplification and refinement.
 
 **Recent Changes:**
-- **Previous (Echo Test Fix):**
-    - Identified that the `pursIdeQuit` test was hanging. Fixed this by modifying the `pursIdeQuit` handler in `index.js`.
-    - Updated the assertion for the `stop_purs_ide_server` test in `run_tests.js`.
-    - Corrected the assertion for the `pursIdeList` (import) test in `run_tests.js`.
-    - Corrected the `pursIdeType` test with an "exact" filter in `run_tests.js`.
-    - Modified `internalHandleGetServerStatus` in `index.js` to return the correct response structure, addressing the `get_server_status` test failure.
-    - Updated the assertion for the `echo` test in `run_tests.js` to be more robust.
-- **Current (File Logging):**
-    - Added a `LOG_FILE_PATH` constant in `index.js` (defaults to `purescript-mcp-server.log`).
-    - Modified the `logToStderr` function in `index.js` to append plain (uncolored) log messages to the specified log file, in addition to writing colored messages to `stderr`.
-    - Added error handling for file append operations within `logToStderr`.
+- **`getTopLevelDeclarations` Simplification (in `index.js`):**
+    - Refactored the logic for determining declaration names to use a `Map` for capture lookups and a prioritized list of keys, reducing a long `if/else if` chain.
+- **Previous (`getTopLevelDeclarations` Update):**
+    - Removed post-processing logic (consolidation of signatures/values, filtering of class method signatures) from `index.js`. The tool now returns raw query results.
+    - Corrected Tree-sitter query for `newtype` (was `newtype_declaration`).
+    - Corrected Tree-sitter query for `type_role_declaration` and its name capture.
+    - Corrected Tree-sitter query for `operator_declaration` (fixity) and its name capture.
+- **Previous (`getWhereBindings` Refinement):**
+    - Updated the Tree-sitter query in `index.js` to `(function (where) @where_keyword (declarations) @declarations_block)` to correctly identify and extract `where` clauses associated with functions.
+- **Previous (Test Script Updates - `run_tests.js`):**
+    - Adjusted `getTopLevelDeclarationsTestCode` to include `type role` and `infix` declarations.
+    - Updated `expectedDeclCount` for `getTopLevelDeclarations` to 13 (reflecting no post-processing) and adjusted filtering assertions.
+    - Updated assertion for `getWhereBindings` to expect an array containing the full `where ...` text.
+- **Previous (Tool Consolidation - AST Querying):**
+    - Removed `getTypeAliases`, `getInstances`, `getTypeClasses`, `getDataTypes`, `getTypeSignatures` (and earlier, `getDoBindings`, etc.) from all relevant files.
+- **Previous (File Logging - 2025-06-12):**
+    - Added file-based logging.
 
 **Next Steps:**
-- Update `memory-bank/progress.md` to reflect the addition of file-based logging.
-- Add `*.log` to `.gitignore` to prevent log files from being committed.
-- Inform the user about the new logging feature and the log file location.
-- Suggest testing the server to ensure logs are written correctly to both `stderr` and the file.
+- Update `memory-bank/progress.md` and `memory-bank/systemPatterns.md` to reflect the code simplification.
+- Review and update `.clinerules` if necessary.
+- Inform the user about the completed simplification.
+- Strongly suggest running tests to confirm all fixes and the new simplification.
