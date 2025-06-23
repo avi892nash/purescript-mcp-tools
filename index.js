@@ -81,10 +81,46 @@ async function initializeTreeSitterParser() {
     }
 }
 
-// --- Helper Functions (unchanged) ---
+// --- Helper Functions ---
 function getNamespaceForDeclaration(declarationType) { /* ... */ }
 function getDeclarationId(decl) { /* ... */ }
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+// Helper to find an available random port
+function findAvailablePort(startPort = 4242, endPort = 65535) {
+    return new Promise((resolve, reject) => {
+        const randomPort = Math.floor(Math.random() * (endPort - startPort + 1)) + startPort;
+        const server = net.createServer();
+        
+        server.listen(randomPort, (err) => {
+            if (err) {
+                // Port is busy, try another random port
+                server.close();
+                if (randomPort === endPort) {
+                    reject(new Error(`No available ports found in range ${startPort}-${endPort}`));
+                } else {
+                    // Try a different random port
+                    resolve(findAvailablePort(startPort, endPort));
+                }
+            } else {
+                const port = server.address().port;
+                server.close(() => {
+                    resolve(port);
+                });
+            }
+        });
+        
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                server.close();
+                // Try a different random port
+                resolve(findAvailablePort(startPort, endPort));
+            } else {
+                reject(err);
+            }
+        });
+    });
+}
 
 // Helper to get code from input args (filePath or code string)
 async function getCodeFromInput(args, isModuleOriented = true) {
@@ -230,13 +266,26 @@ async function internalHandleStartPursIdeServer(args) {
     if (!args.project_path || typeof args.project_path !== 'string') {
         throw new Error("Invalid input: 'project_path' (string) is required for start_purs_ide_server.");
     }
-    pursIdeServerPort = args.port || 4242;
-    pursIdeProjectPath = path.resolve(args.project_path); // Removed default process.cwd()
+    
+    // Use random port if no port specified, or try to find available port if specified port fails
+    let attemptedPort = args.port;
+    if (!attemptedPort) {
+        try {
+            pursIdeServerPort = await findAvailablePort();
+            logToStderr(`No port specified, using random available port: ${pursIdeServerPort}`, "info");
+        } catch (portError) {
+            throw new Error(`Failed to find available port: ${portError.message}`);
+        }
+    } else {
+        pursIdeServerPort = attemptedPort;
+    }
+    
+    pursIdeProjectPath = path.resolve(args.project_path);
     const outputDir = args.output_directory || "output/";
     const sourceGlobs = args.source_globs || ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"];
     const logLevel = args.log_level || "none";
     pursIdeLogBuffer = [];
-    // Reverted to pass sourceGlobs directly as arguments
+    
     const cmdArgs = ['ide', 'server', '--port', pursIdeServerPort.toString(), '--output-directory', outputDir, '--log-level', logLevel, ...sourceGlobs];
     const fullCommand = `npx purs ${cmdArgs.join(' ')}`;
     logToStderr(`Spawning '${fullCommand}' in CWD: ${pursIdeProjectPath}`, "info");
@@ -244,21 +293,76 @@ async function internalHandleStartPursIdeServer(args) {
     return new Promise((resolve, reject) => {
         pursIdeProcess = spawn('npx', ['purs', ...cmdArgs], { cwd: pursIdeProjectPath, shell: false, env: process.env });
         pursIdeIsReady = false;
+        
+        let hasStartupError = false;
+        let startupErrorMessage = '';
+        
         pursIdeProcess.stdout.on('data', (data) => logPursIdeOutput(data, 'stdout'));
-        pursIdeProcess.stderr.on('data', (data) => logPursIdeOutput(data, 'stderr'));
-        pursIdeProcess.on('error', (err) => {
-            logPursIdeOutput(`Failed to start purs ide server: ${err.message}`, 'error');
-            pursIdeProcess = null;
-            reject(new Error(`Failed to start purs ide server: ${err.message}`)); // This error will be caught by handleMcpRequest
+        pursIdeProcess.stderr.on('data', (data) => {
+            const message = data.toString().trim();
+            logPursIdeOutput(data, 'stderr');
+            
+            // Check for port-related errors
+            if (message.includes('Address already in use') || message.includes('resource busy')) {
+                hasStartupError = true;
+                startupErrorMessage = `Port ${pursIdeServerPort} is already in use. Try using a different port or let the system choose an available port automatically.`;
+            } else if (message.includes('bind:') && message.includes('permission denied')) {
+                hasStartupError = true;
+                startupErrorMessage = `Permission denied on port ${pursIdeServerPort}. Try using a port number above 1024 or run with appropriate permissions.`;
+            } else if (message.includes('purs:') && message.includes('Network.Socket.bind:')) {
+                hasStartupError = true;
+                startupErrorMessage = `Network error binding to port ${pursIdeServerPort}: ${message}`;
+            }
         });
-        pursIdeProcess.on('close', (code) => {
-            logPursIdeOutput(`purs ide server process exited with code ${code}`, code === 0 ? 'info' : 'error');
+        
+        pursIdeProcess.on('error', (err) => {
+            const errorMsg = `Failed to start purs ide server process: ${err.message}`;
+            logPursIdeOutput(errorMsg, 'error');
+            pursIdeProcess = null;
+            reject(new Error(errorMsg));
+        });
+        
+        pursIdeProcess.on('close', async (code) => {
+            const codeMessage = `purs ide server process exited with code ${code}`;
+            logPursIdeOutput(codeMessage, code === 0 ? 'info' : 'error');
+            
             if (pursIdeProcess) { 
                 pursIdeProcess = null; 
                 pursIdeIsReady = false; 
             }
+            
+            // If process exited early due to startup error, handle it
+            if (code !== 0 && hasStartupError) {
+                const enhancedError = startupErrorMessage || `Server failed to start (exit code ${code})`;
+                
+                // If original port was specified and failed, optionally try random port
+                if (attemptedPort && args.use_random_port_on_failure && startupErrorMessage.includes('already in use')) {
+                    logToStderr(`Port ${attemptedPort} failed, retrying with random available port...`, "info");
+                    // Retry with random port
+                    const retryArgs = { ...args, port: undefined }; // Remove specific port to trigger random selection
+                    delete retryArgs.use_random_port_on_failure; // Prevent infinite recursion
+                    try {
+                        const retryResult = await internalHandleStartPursIdeServer(retryArgs);
+                        resolve(retryResult);
+                    } catch (retryError) {
+                        reject(new Error(`Original port ${attemptedPort} failed: ${enhancedError}. Retry with random port also failed: ${retryError.message}`));
+                    }
+                } else if (attemptedPort && !args.use_random_port_on_failure) {
+                    const retryMessage = `${enhancedError} Would you like to retry with a random available port? Set 'use_random_port_on_failure: true' in the request.`;
+                    reject(new Error(retryMessage));
+                } else {
+                    reject(new Error(enhancedError));
+                }
+            }
         });
+        
+        // Check if server started successfully after a short delay
         setTimeout(async () => {
+            // If process exited with error during startup, don't proceed
+            if (hasStartupError && !pursIdeProcess) {
+                return; // Error already handled in 'close' event
+            }
+            
             try {
                 logToStderr("Attempting initial 'load' command to purs ide server...", "info");
                 pursIdeIsReady = true;
@@ -280,7 +384,7 @@ async function internalHandleStartPursIdeServer(args) {
                     pursIdeProcess.kill(); 
                     pursIdeProcess = null; 
                 }
-                reject(new Error(`purs ide server started but initial load command failed: ${error.message}`)); // This error will be caught by handleMcpRequest
+                reject(new Error(`purs ide server started but initial load command failed: ${error.message}`));
             }
         }, 3000);
     });
@@ -590,12 +694,13 @@ const TOOL_DEFINITIONS = [
     // End of Phase 1 tools
     {
         name: "start_purs_ide_server",
-        description: "Start the heavy PureScript IDE server for type checking, auto-completion, and error detection. WARNING: This is a resource-intensive process. Automatically stops any existing server to prevent conflicts. Only run one at a time. Required for all pursIde* tools to work.",
+        description: "Start the heavy PureScript IDE server for type checking, auto-completion, and error detection. WARNING: This is a resource-intensive process. Automatically stops any existing server to prevent conflicts. Only run one at a time. Required for all pursIde* tools to work. If no port is specified, a random available port will be chosen automatically to avoid conflicts.",
         inputSchema: {
             type: "object",
             properties: {
                 project_path: { type: "string", description: "Absolute or relative path to the PureScript project directory." },
-                port: { type: "integer", default: 4242 },
+                port: { type: "integer", description: "Optional specific port to use. If not provided, a random available port will be chosen automatically to avoid conflicts." },
+                use_random_port_on_failure: { type: "boolean", default: false, description: "If true, automatically retry with a random port if the specified port fails due to being in use." },
                 output_directory: { type: "string", default: "output/" },
                 source_globs: { type: "array", items: { type: "string" }, default: ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"]},
                 log_level: { type: "string", enum: ["all", "debug", "perf", "none"], default: "none" }
