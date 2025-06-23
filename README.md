@@ -1,118 +1,96 @@
-# PureScript Tools MCP 🟣
+# PureScript MCP Server
 
-A Model Context Protocol (MCP) server designed to enhance PureScript development workflows. This tool provides comprehensive support for PureScript projects, including code analysis, dependency management, and development assistance.
+A Model Context Protocol (MCP) server that provides PureScript development tools for AI assistants like Claude.
 
-## Features ✨
+## Quick Install
 
-- **PureScript Code Analysis**: Parse and analyze PureScript code structures
-- **Dependency Management**: Handle Spago and Bower dependencies
-- **Project Scaffolding**: Generate PureScript project templates
-- **Build Integration**: Interface with PureScript compiler and build tools
-- **Development Assistance**: Provide contextual help and suggestions
+### 1. Download and Setup
+```bash
+# Clone this repository
+git clone <repository-url>
+cd purescript-mcp-server
 
-## Prerequisites
+# Install dependencies
+npm install
 
-- **System Requirements**:
-  - Node.js (install from [nodejs.org](https://nodejs.org))
-  - Git configured with SSH keys for Bitbucket access
-  - SSH access to the Bitbucket repository
+# Test that it works
+node index.js
+# Press Ctrl+C to stop
+```
 
-## Installation
+### 2. Configure Your MCP Client
 
-1. **Create Project Directory**:
-   ```bash
-   mkdir -p ~/Documents/Claude/MCP
-   cd ~/Documents/Claude/MCP
-   ```
+#### For Claude Desktop
+1. Find your Claude config file:
+   - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
 
-2. **Clone the Repository**:
-   ```bash
-   git clone ssh://git@ssh.bitbucket.juspay.net/~avinash.verma_juspay.in/purescript-tools-mcp.git
-   cd purescript-tools-mcp
-   ```
-
-3. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
-
-## Configuration
-
-4. **Add to your MCP settings configuration** (typically located at `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`):
-
+2. Add this server configuration:
 ```json
 {
   "mcpServers": {
     "purescript-tools": {
       "command": "node",
-      "args": [
-        "/Users/your-username/Documents/Claude/MCP/purescript-tools-mcp/index.js"
-      ],
-      "disabled": false,
-      "autoApprove": []
+      "args": ["/FULL/PATH/TO/purescript-mcp-server/index.js"]
     }
   }
 }
 ```
 
-**Note**: Replace `/Users/your-username/Documents/Claude/MCP/purescript-tools-mcp/index.js` with the absolute path to the `index.js` file in your cloned repository.
+3. **Important**: Replace `/FULL/PATH/TO/` with the actual absolute path to where you cloned this repository.
 
-## Starting the Server
+4. Restart Claude Desktop.
 
-1. **Manual Start**:
-   ```bash
-   cd ~/Documents/Claude/MCP/purescript-tools-mcp
-   node index.js
-   ```
+#### For Other MCP Clients
+Configure as a stdio MCP server:
+- **Command**: `node`
+- **Arguments**: `["/full/path/to/index.js"]`
+- **Protocol**: stdio
 
-2. **Verify Server**:
-   The server should start without any errors. Keep this terminal window open while using the server.
+### 3. Verify Installation
+
+In your MCP client, try running:
+```
+get_server_status
+```
+
+You should see a response showing the server is running.
+
+## What This Server Provides
+
+This MCP server gives AI assistants the ability to:
+
+- **Analyze PureScript code** without heavy IDE setup
+- **Start/manage PureScript IDE servers** for advanced features
+- **Look up types and find code usages**
+- **Generate dependency graphs**
+- **Parse code structure** (modules, imports, functions)
+
+## Basic Usage Flow
+
+1. **Check status**: `get_server_status`
+2. **For simple analysis**: Use `getModuleName`, `getImports`, etc. directly
+3. **For advanced features**: 
+   - `start_purs_ide_server` with your project path
+   - `pursIdeLoad` to load modules
+   - Use `pursIdeType`, `pursIdeUsages`, etc.
+
+## Requirements
+
+- **Node.js** (any recent version)
+- **PureScript compiler** (`purs`) if using IDE features
+- **Your PureScript project** with compiled output
 
 ## Troubleshooting
 
-1. **Server Connection Issues**:
-   - Ensure the server is running in a separate terminal
-   - Verify the correct path is set in the `cwd` field of your configuration
-   - Check that `index.js` exists in the project root directory
+**Server won't start**: Check that Node.js is installed and you ran `npm install`
 
-2. **SSH Access Issues**:
-   - Verify your SSH keys are properly configured for Bitbucket
-   - Test SSH connection: `ssh -T git@ssh.bitbucket.juspay.net`
+**Tools not working**: Run `get_server_status` first to see what's available
 
-3. **Configuration File Location**:
-   - Make sure you're editing the global `/cline_mcp_settings.json` file
-   - Do NOT create `cline_mcp_settings.json` in the project directory
+**Path errors**: Make sure you used the full absolute path in your MCP configuration
 
-## Development
+**Multiple servers**: Only run one PureScript IDE server at a time to avoid conflicts
 
-```bash
-# Install dependencies
-npm install
+## Support
 
-# Start server
-node index.js
-
-# Start server with debug output
-DEBUG=* node index.js
-```
-
-## Example Usage
-
-Once configured and running, the PureScript Tools MCP will be available in your Cline environment, providing assistance with:
-
-- Analyzing PureScript code structure
-- Managing project dependencies
-- Building and compiling PureScript projects
-- Providing development guidance and best practices
-
-## Verification
-
-After updating the `/cline_mcp_settings.json` file and restarting your Cline environment, the PureScript Tools MCP should be available and ready to use.
-
-## License
-
-MIT
-
----
-
-**Note**: This MCP server is specifically designed for PureScript development workflows and integrates with the Juspay development environment.
+This server provides comprehensive PureScript development assistance to AI tools through the standardized MCP protocol.

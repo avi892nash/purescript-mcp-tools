@@ -128,3 +128,7 @@ coverage/
 
 # VSCode settings
 .vscode/
+
+# MCP Server specific
+purescript-mcp-server.log
+memory-bank/

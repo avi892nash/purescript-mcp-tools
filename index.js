@@ -498,12 +498,12 @@ async function internalHandleGenerateDependencyGraph(args) {
 const TOOL_DEFINITIONS = [
     {
         name: "get_server_status", 
-        description: "Returns the current status of the server and its components.",
+        description: "Check if heavy IDE server processes are running to avoid resource conflicts. Shows status of Tree-sitter parser (lightweight code analysis) and purs IDE server (heavy process for type checking). ALWAYS use this before starting new IDE servers to prevent running multiple heavy processes simultaneously.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
     },
     {
         name: "echo",
-        description: "Echoes back the input string.",
+        description: "Simple test tool that echoes back your input. Use to verify the MCP server is responding correctly.",
         inputSchema: { type: "object", properties: { message: { type: "string"}}, required: ["message"], additionalProperties: false },
     },
     {
@@ -515,7 +515,7 @@ const TOOL_DEFINITIONS = [
     // Module Information
     {
         name: "getModuleName",
-        description: "Extracts the module name from a PureScript file or code string.",
+        description: "Extract the module name (like 'Data.List' or 'Main') from PureScript code. Works on files or code snippets without needing the heavy IDE server. Useful for understanding code structure.",
         inputSchema: {
             type: "object",
             properties: {
@@ -528,7 +528,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "getImports",
-        description: "Retrieves all import statements with module and submodule information.",
+        description: "Find all import statements in PureScript code (like 'import Data.List', 'import Prelude'). Shows what external modules the code depends on. Works without the heavy IDE server.",
         inputSchema: {
             type: "object",
             properties: {
@@ -541,7 +541,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "getTopLevelDeclarationNames",
-        description: "Extracts the names of all top-level declarations (functions, data types, type classes, etc.) from a PureScript file or code string.",
+        description: "List all main definitions in PureScript code: function names, data types, type classes, etc. Gets just the names (like 'myFunction', 'MyDataType'). Fast analysis without needing IDE server.",
         inputSchema: {
             type: "object",
             properties: {
@@ -555,7 +555,7 @@ const TOOL_DEFINITIONS = [
     // Function and Value Declarations
     {
         name: "getFunctionNames",
-        description: "Gets all function names defined in the code snippet.",
+        description: "Extract only function names from PureScript code snippets. Focuses specifically on functions, ignoring data types and classes. Quick analysis for code understanding.",
         inputSchema: {
             type: "object",
             properties: { code: { type: "string", description: "PureScript code snippet." } },
@@ -567,7 +567,7 @@ const TOOL_DEFINITIONS = [
     // Control Flow Analysis
     {
         name: "getWhereBindings",
-        description: "Extracts entire where blocks as text from a code snippet.",
+        description: "Find 'where' clauses in PureScript functions. These contain local helper functions and variables. Useful for understanding function implementation details.",
         inputSchema: {
             type: "object",
             properties: { code: { type: "string", description: "PureScript code snippet." } },
@@ -577,7 +577,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "getTopLevelDeclarations",
-        description: "Extracts detailed information (name, type, value) of top-level declarations from a PureScript file or code string, with filtering.",
+        description: "Get detailed information about all main definitions in PureScript code: names, types (function/data/class), and full source code. Includes filtering options to find specific items. More comprehensive than getTopLevelDeclarationNames.",
         inputSchema: {
             type: "object",
             properties: {
@@ -601,7 +601,7 @@ const TOOL_DEFINITIONS = [
     // End of Phase 1 tools
     {
         name: "start_purs_ide_server",
-        description: "Starts a purs ide server process. Manages one server instance at a time.",
+        description: "Start the heavy PureScript IDE server for type checking, auto-completion, and error detection. WARNING: This is a resource-intensive process. Automatically stops any existing server to prevent conflicts. Only run one at a time. Required for all pursIde* tools to work.",
         inputSchema: {
             type: "object",
             properties: {
@@ -617,17 +617,17 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "stop_purs_ide_server",
-        description: "Stops the currently managed purs ide server process.",
+        description: "Stop the heavy PureScript IDE server to free up system resources. Use when you're done with type checking or want to switch projects. All pursIde* tools will stop working after this.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
     },
     {
         name: "query_purs_ide",
-        description: "Sends a command to the currently running purs ide server.",
+        description: "Send raw commands to the PureScript IDE server. PREREQUISITE: IDE server must be running (use start_purs_ide_server first). Advanced tool - prefer specific pursIde* tools for common tasks.",
         inputSchema: { type: "object", properties: { purs_ide_command: { type: "string" }, purs_ide_params: { type: "object" }}, required: ["purs_ide_command"], additionalProperties: false },
     },
     {
         name: "generate_dependency_graph",
-        description: "Generates a dependency graph for specified PureScript modules.",
+        description: "Create a dependency graph showing which functions/types use which others in PureScript modules. PREREQUISITES: IDE server must be running and modules must be loaded. Useful for understanding code relationships and refactoring impact.",
         inputSchema: {
             type: "object",
             properties: {
@@ -641,7 +641,7 @@ const TOOL_DEFINITIONS = [
     // --- purs ide direct command wrappers ---
     {
         name: "pursIdeLoad",
-        description: "Loads modules into the purs ide server. Typically the first command after server start.",
+        description: "Load PureScript modules into the IDE server for type checking and completions. PREREQUISITE: IDE server must be running. ALWAYS run this first after starting the IDE server before using other pursIde* tools.",
         inputSchema: {
             type: "object",
             properties: {
@@ -656,7 +656,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "pursIdeType",
-        description: "Looks up the type of a given identifier using purs ide server.",
+        description: "Look up the type signature of functions, variables, or values in PureScript code. PREREQUISITES: IDE server running and modules loaded. Helpful for understanding what a function expects and returns.",
         inputSchema: {
             type: "object",
             properties: {
@@ -670,22 +670,22 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "pursIdeCwd",
-        description: "Gets the current working directory of the purs ide server.",
+        description: "Get the current working directory that the IDE server is using. PREREQUISITE: IDE server must be running. Useful for understanding the project context.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false }
     },
     {
         name: "pursIdeReset",
-        description: "Clears loaded modules in the purs ide server.",
+        description: "Clear all loaded modules from the IDE server's memory. PREREQUISITE: IDE server must be running. Use when switching projects or after major code changes. You'll need to run pursIdeLoad again after this.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false }
     },
     {
         name: "pursIdeQuit",
-        description: "Requests the purs ide server to quit and stops the managed process.",
+        description: "Gracefully shut down the IDE server and free up resources. PREREQUISITE: IDE server must be running. Same effect as stop_purs_ide_server but uses the server's built-in quit command first.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false }
     },
     {
         name: "pursIdeRebuild",
-        description: "Provides a fast rebuild for a single module using purs ide server.",
+        description: "Quickly recompile a single PureScript module and check for errors. PREREQUISITES: IDE server running and modules loaded. Much faster than full project rebuild. Use when editing code to get immediate feedback.",
         inputSchema: {
             type: "object",
             properties: {
@@ -699,7 +699,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "pursIdeUsages",
-        description: "Finds all usages of a uniquely identified declaration using purs ide server.",
+        description: "Find everywhere a specific function, type, or value is used across the project. PREREQUISITES: IDE server running and modules loaded. Essential for refactoring - shows impact of changes.",
         inputSchema: {
             type: "object",
             properties: {
@@ -713,7 +713,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "pursIdeList",
-        description: "Lists available modules or imports for a file using purs ide server.",
+        description: "List available modules in the project or imports in a specific file. PREREQUISITES: IDE server running and modules loaded. Helps understand project structure and dependencies.",
         inputSchema: {
             type: "object",
             properties: {
