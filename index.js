@@ -46,24 +46,13 @@ const SERVER_CAPABILITIES = {
 // --- Logging ---
 function logToStderr(message, level = 'info') {
     const timestamp = new Date().toISOString();
-    let coloredMessage = message;
     const plainMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
 
-    switch (level) {
-        case 'error': coloredMessage = chalk.redBright(plainMessage); break;
-        case 'warn': coloredMessage = chalk.yellowBright(plainMessage); break;
-        case 'info': coloredMessage = chalk.blueBright(plainMessage); break;
-        case 'debug': coloredMessage = chalk.gray(plainMessage); break;
-        default: coloredMessage = plainMessage; // Use plain message if level is unknown for stderr
-    }
-    process.stderr.write(coloredMessage + '\n');
-
-    // Append to log file
+    // Only write to log file to avoid stdio conflicts
     fs.appendFile(LOG_FILE_PATH, plainMessage + '\n')
         .catch(err => {
-            // If file logging fails, log an error to stderr itself.
-            const fileLogError = `[${new Date().toISOString()}] [ERROR] Failed to write to log file ${LOG_FILE_PATH}: ${err.message}`;
-            process.stderr.write(chalk.redBright(fileLogError) + '\n');
+            // Silently fail if file logging fails to avoid recursive stderr issues
+            // Alternative: write to a different error log file if needed
         });
 }
 
