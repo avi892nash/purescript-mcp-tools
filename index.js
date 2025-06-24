@@ -132,20 +132,13 @@ async function getCodeFromInput(args, isModuleOriented = true) {
             throw new Error("Invalid input: Exactly one of 'filePath' or 'code' must be provided for module-oriented tools.");
         }
         if (hasFilePath) {
-            let resolvedPath = args.filePath;
+            if (!path.isAbsolute(args.filePath)) {
+                throw new Error(`Invalid filePath: '${args.filePath}' is not an absolute path. Only absolute paths are supported.`);
+            }
             try {
-                if (!path.isAbsolute(resolvedPath)) {
-                    if (pursIdeProjectPath) {
-                        resolvedPath = path.resolve(pursIdeProjectPath, args.filePath);
-                        logToStderr(`[getCodeFromInput] Resolved relative filePath "${args.filePath}" to "${resolvedPath}" using pursIdeProjectPath.`, 'debug');
-                    } else {
-                        resolvedPath = path.resolve(process.cwd(), args.filePath);
-                        logToStderr(`[getCodeFromInput] Warning: pursIdeProjectPath not set. Resolved relative filePath "${args.filePath}" to "${resolvedPath}" using process.cwd(). Consider starting purs-ide-server to set project context.`, 'warn');
-                    }
-                }
-                return await fs.readFile(resolvedPath, 'utf-8');
+                return await fs.readFile(args.filePath, 'utf-8');
             } catch (e) {
-                throw new Error(`Failed to read file at ${resolvedPath} (original: ${args.filePath}): ${e.message}`);
+                throw new Error(`Failed to read file at ${args.filePath}: ${e.message}`);
             }
         }
         return args.code;
@@ -275,7 +268,24 @@ async function internalHandleStartPursIdeServer(args) {
         throw new Error(`Failed to find available port: ${portError.message}`);
     }
     
-    pursIdeProjectPath = path.resolve(args.project_path);
+    if (!path.isAbsolute(args.project_path)) {
+        throw new Error(`Invalid project_path: '${args.project_path}' is not an absolute path. Only absolute paths are supported.`);
+    }
+    
+    const resolvedProjectPath = args.project_path;
+
+    // Validate that the resolved path exists and is a directory
+    try {
+        const stats = await fs.stat(resolvedProjectPath);
+        if (!stats.isDirectory()) {
+            throw new Error(`Project path '${resolvedProjectPath}' is not a directory.`);
+        }
+        logToStderr(`Validated project directory exists: "${resolvedProjectPath}"`, 'debug');
+    } catch (e) {
+        throw new Error(`Invalid project_path: ${resolvedProjectPath}. Error: ${e.message}`);
+    }
+
+    pursIdeProjectPath = resolvedProjectPath;
     const outputDir = args.output_directory || "output/";
     const sourceGlobs = args.source_globs || ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"];
     const logLevel = args.log_level || "none";
@@ -547,7 +557,7 @@ async function internalHandleGenerateDependencyGraph(args) {
 const TOOL_DEFINITIONS = [
     {
         name: "get_server_status", 
-        description: "Check if heavy IDE server processes are running to avoid resource conflicts. Shows status of Tree-sitter parser (lightweight code analysis) and purs IDE server (heavy process for type checking). ALWAYS use this before starting new IDE servers to prevent running multiple heavy processes simultaneously.",
+        description: "Check if IDE server processes are running to avoid resource conflicts. Shows status of Tree-sitter parser (lightweight code analysis) and purs IDE server (process for type checking). ALWAYS use this before starting new IDE servers to prevent running multiple processes simultaneously.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
     },
     {
@@ -564,11 +574,11 @@ const TOOL_DEFINITIONS = [
     // Module Information
     {
         name: "getModuleName",
-        description: "Extract the module name (like 'Data.List' or 'Main') from PureScript code. Works on files or code snippets without needing the heavy IDE server. Useful for understanding code structure.",
+        description: "Extract the module name (like 'Data.List' or 'Main') from PureScript code. Works on files or code snippets without needing the IDE server. Useful for understanding code structure.",
         inputSchema: {
             type: "object",
             properties: {
-                filePath: { type: "string", description: "Path to the PureScript file. Relative paths resolved (project-relative if IDE server active, else CWD-relative). Absolute paths used as-is." },
+                filePath: { type: "string", description: "Absolute path to the PureScript file. Only absolute paths are supported." },
                 code: { type: "string", description: "PureScript code string." }
             },
             additionalProperties: false,
@@ -577,11 +587,11 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "getImports",
-        description: "Find all import statements in PureScript code (like 'import Data.List', 'import Prelude'). Shows what external modules the code depends on. Works without the heavy IDE server.",
+        description: "Find all import statements in PureScript code (like 'import Data.List', 'import Prelude'). Shows what external modules the code depends on. Works without the IDE server.",
         inputSchema: {
             type: "object",
             properties: {
-                filePath: { type: "string", description: "Path to the PureScript file. Relative paths resolved (project-relative if IDE server active, else CWD-relative). Absolute paths used as-is." },
+                filePath: { type: "string", description: "Absolute path to the PureScript file. Only absolute paths are supported." },
                 code: { type: "string", description: "PureScript code string." }
             },
             additionalProperties: false,
@@ -594,7 +604,7 @@ const TOOL_DEFINITIONS = [
         inputSchema: {
             type: "object",
             properties: {
-                filePath: { type: "string", description: "Path to the PureScript file. Relative paths resolved (project-relative if IDE server active, else CWD-relative). Absolute paths used as-is." },
+                filePath: { type: "string", description: "Absolute path to the PureScript file. Only absolute paths are supported." },
                 code: { type: "string", description: "PureScript code string." }
             },
             additionalProperties: false,
@@ -630,7 +640,7 @@ const TOOL_DEFINITIONS = [
         inputSchema: {
             type: "object",
             properties: {
-                filePath: { type: "string", description: "Path to the PureScript file. Relative paths resolved (project-relative if IDE server active, else CWD-relative). Absolute paths used as-is." },
+                filePath: { type: "string", description: "Absolute path to the PureScript file. Only absolute paths are supported." },
                 code: { type: "string", description: "PureScript code string." },
                 filters: {
                     type: "object",
@@ -650,11 +660,11 @@ const TOOL_DEFINITIONS = [
     // End of Phase 1 tools
     {
         name: "start_purs_ide_server",
-        description: "Start the heavy PureScript IDE server for type checking, auto-completion, and error detection. WARNING: This is a resource-intensive process. Automatically stops any existing server to prevent conflicts. Only run one at a time. Required for all pursIde* tools to work. Automatically selects a random available port to avoid conflicts - the port number is returned in the response.",
+        description: "Start the PureScript IDE server for type checking, auto-completion, and error detection. Automatically stops any existing server to prevent conflicts. Only run one at a time. Required for all pursIde* tools to work. Automatically selects a random available port to avoid conflicts - the port number is returned in the response. Only accepts absolute paths.",
         inputSchema: {
             type: "object",
             properties: {
-                project_path: { type: "string", description: "Absolute or relative path to the PureScript project directory." },
+                project_path: { type: "string", description: "Absolute path to the PureScript project directory. Only absolute paths are supported." },
                 output_directory: { type: "string", default: "output/" },
                 source_globs: { type: "array", items: { type: "string" }, default: ["src/**/*.purs", ".spago/*/*/src/**/*.purs", "test/**/*.purs"]},
                 log_level: { type: "string", enum: ["all", "debug", "perf", "none"], default: "none" }
@@ -665,7 +675,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "stop_purs_ide_server",
-        description: "Stop the heavy PureScript IDE server to free up system resources. Use when you're done with type checking or want to switch projects. All pursIde* tools will stop working after this.",
+        description: "Stop the PureScript IDE server to free up system resources. Use when you're done with type checking or want to switch projects. All pursIde* tools will stop working after this.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
     },
     {
@@ -747,7 +757,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "pursIdeUsages",
-        description: "Find everywhere a specific function, type, or value is used across the project. PREREQUISITES: IDE server running and modules loaded. Essential for refactoring - shows impact of changes.",
+        description: "Find everywhere a specific function, type, or value is used across the project. PREREQUISITES: IDE server running and modules loaded. Essential for refactoring - shows impact of changes. If you plan to refactor, get usages before refactoring so you can make changes to all places that function is used.",
         inputSchema: {
             type: "object",
             properties: {
