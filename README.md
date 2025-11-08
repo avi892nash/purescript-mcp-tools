@@ -2,6 +2,10 @@
 
 A Model Context Protocol (MCP) server that provides PureScript development tools for AI assistants like Claude.
 
+<a href="https://glama.ai/mcp/servers/@avi892nash/purescript-mcp-tools">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@avi892nash/purescript-mcp-tools/badge" alt="PureScript Server MCP server" />
+</a>
+
 ## Quick Install
 
 ### 1. Download and Setup
