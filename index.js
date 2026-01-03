@@ -259,7 +259,7 @@ async function internalHandleStartPursIdeServer(args) {
     if (!args.project_path || typeof args.project_path !== 'string') {
         throw new Error("Invalid input: 'project_path' (string) is required for start_purs_ide_server.");
     }
-    
+
     // Always use a random available port
     try {
         pursIdeServerPort = await findAvailablePort();
@@ -333,6 +333,26 @@ async function internalHandleStartPursIdeServer(args) {
                 logToStderr("Attempting initial 'load' command to purs ide server...", "info");
                 pursIdeIsReady = true;
                 const loadResult = await sendCommandToPursIde({ command: "load", params: {} });
+
+                // Check if the load command returned an error
+                if (loadResult.resultType === "error") {
+                    pursIdeIsReady = false;
+                    logToStderr(`Initial 'load' command failed: ${loadResult.result}`, "error");
+                    if(pursIdeProcess) {
+                        pursIdeProcess.kill();
+                        pursIdeProcess = null;
+                    }
+
+                    // Provide helpful error message based on common issues
+                    let errorMessage = `Failed to load PureScript project: ${loadResult.result}`;
+                    if (typeof loadResult.result === 'string' && loadResult.result.includes("output directory")) {
+                        errorMessage += "\n\nThe project needs to be built first. Run 'spago build' in the project directory before starting the IDE server.";
+                    }
+
+                    reject(new Error(errorMessage));
+                    return;
+                }
+
                 logToStderr("Initial 'load' command to purs ide server successful.", "info");
                 const result = {
                     status_message: "purs ide server started and initial load attempted.",
@@ -346,9 +366,9 @@ async function internalHandleStartPursIdeServer(args) {
             } catch (error) {
                 pursIdeIsReady = false;
                 logToStderr(`Error during initial 'load' to purs ide server: ${error.message}`, "error");
-                if(pursIdeProcess) { 
-                    pursIdeProcess.kill(); 
-                    pursIdeProcess = null; 
+                if(pursIdeProcess) {
+                    pursIdeProcess.kill();
+                    pursIdeProcess = null;
                 }
                 reject(new Error(`purs ide server started but initial load command failed: ${error.message}`));
             }

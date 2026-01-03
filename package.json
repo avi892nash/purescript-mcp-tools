@@ -1,19 +1,61 @@
 {
-  "name": "what-is-purs",
+  "name": "purescript-mcp-tools",
   "version": "1.0.0",
+  "description": "A Model Context Protocol (MCP) server providing PureScript development tools for AI assistants",
   "main": "index.js",
+  "bin": {
+    "purescript-mcp-tools": "./index.js"
+  },
   "scripts": {
     "start": "node index.js",
     "test": "node run_tests.js",
-    "build": "",
-    "test:original": "echo \"Error: no test specified\" && exit 1"
+    "prepublishOnly": "npm test"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "purescript",
+    "language-server",
+    "ide",
+    "ai-tools",
+    "claude",
+    "llm",
+    "code-analysis",
+    "developer-tools",
+    "mcp-server",
+    "ai-assistant"
+  ],
+  "author": {
+    "name": "Avinash Verma",
+    "url": "https://github.com/avi892nash"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/avi892nash/purescript-mcp-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/avi892nash/purescript-mcp-tools/issues"
+  },
+  "homepage": "https://github.com/avi892nash/purescript-mcp-tools#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "index.js",
+    "run_tests.js",
+    "tree-sitter-purescript.wasm",
+    "purescript-test-examples",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "chalk": "^4.1.2",
+    "purescript": "^0.15.15",
     "web-tree-sitter": "^0.25.5"
+  },
+  "preferGlobal": true,
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,0 +1,38 @@
+# Development files
+.git
+.github
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test files
+*.test.js
+test/
+tests/
+
+# Documentation
+.gitignore
+.npmignore
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+
+# Memory bank and development artifacts
+memory-bank/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+.env.*.local
