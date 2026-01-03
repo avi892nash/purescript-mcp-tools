@@ -521,10 +521,9 @@ async function runTests() {
     console.log(chalk.yellow(`\nINFO: For 'start_purs_ide_server' test, ensure '${TEST_PROJECT_PATH}' is compiled (run 'spago build' in it).`));
     const startIdeResult = await callMcpTool('start_purs_ide_server', {
         project_path: TEST_PROJECT_PATH,
-        port: PURS_IDE_TEST_PORT,
         log_level: "debug"
     });
-    assert(startIdeResult && startIdeResult.status_message && startIdeResult.port === PURS_IDE_TEST_PORT, 'start_purs_ide_server reports success and correct port.', 'Start purs ide');
+    assert(startIdeResult && startIdeResult.status_message && typeof startIdeResult.port === 'number', 'start_purs_ide_server reports success and returns a port number.', 'Start purs ide');
     if (startIdeResult && startIdeResult.initial_load_result) {
         logTest(`Initial load result from purs ide: ${JSON.stringify(startIdeResult.initial_load_result)}`, 'info');
         assert(startIdeResult.initial_load_result.resultType === 'success', 'purs ide initial load successful.', 'Start purs ide - Initial Load');
