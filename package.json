@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node index.js",
-    "test": "node run_tests.js",
+    "test": "cd purescript-test-examples && spago build && cd .. && node run_tests.js",
     "prepublishOnly": "npm test"
   },
   "keywords": [
@@ -52,6 +52,7 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "purescript": "^0.15.15",
+    "spago": "^0.21.0",
     "web-tree-sitter": "^0.25.5"
   },
   "preferGlobal": true,

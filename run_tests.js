@@ -4,7 +4,6 @@ const chalk = require('chalk'); // Assuming chalk@4.1.2 is installed
 const path = require('path');
 
 const TEST_PROJECT_PATH = path.resolve(__dirname, './purescript-test-examples');
-const PURS_IDE_TEST_PORT = 4002; // Port for purs ide server during tests
 
 let mcpServerProcess;
 let mcpRl;
